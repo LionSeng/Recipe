@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>减脂餐规划器 · 一周备餐</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --card:#ffffff; --ink:#1f2933; --muted:#687587;
+    --line:#e3e8ef; --brand:#0f9d77; --brand-soft:#e6f6f0; --warn:#d97706;
+    --chip:#eef2f6; --chip-on:#0f9d77; --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:960px;margin:0 auto;padding:16px 16px 60px;}
+  header{display:flex;align-items:center;gap:12px;padding:18px 4px 10px;}
+  header .logo{width:40px;height:40px;border-radius:12px;background:var(--brand);display:grid;place-items:center;color:#fff;font-size:20px;}
+  header h1{font-size:20px;margin:0;}
+  header p{margin:0;color:var(--muted);font-size:13px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0;box-shadow:var(--shadow);}
+  .card h2{font-size:16px;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+  .card h2 .n{width:22px;height:22px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-size:12px;font-weight:700;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;}
+  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:14px;}
+  input:focus,select:focus{outline:none;border-color:var(--brand);}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+  .switch input{display:none}
+  .track{width:42px;height:24px;border-radius:99px;background:#cfd8e3;position:relative;transition:.2s;}
+  .track::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  .switch input:checked + .track{background:var(--brand)}
+  .switch input:checked + .track::after{transform:translateX(18px)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .chip{padding:6px 12px;border:1px solid var(--line);border-radius:99px;background:var(--chip);color:var(--muted);font-size:13px;cursor:pointer;user-select:none;}
+  .chip.on{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:none;border-radius:11px;background:var(--brand);color:#fff;font-size:15px;font-weight:600;cursor:pointer;width:100%;}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand);}
+  .btn.sm{padding:8px 14px;font-size:13px;width:auto;}
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:6px;}
+  .stat{background:var(--brand-soft);border-radius:11px;padding:12px;text-align:center;}
+  .stat b{display:block;font-size:20px;color:var(--brand)}
+  .stat span{font-size:12px;color:var(--muted)}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 0;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:5;border-bottom:1px solid var(--line);}
+  .tab{padding:8px 16px;border-radius:99px;background:#fff;border:1px solid var(--line);cursor:pointer;font-size:14px;color:var(--muted);}
+  .tab.on{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600;}
+  .pane{display:none;margin-top:14px}
+  .pane.on{display:block}
+  .day{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
+  .day h3{margin:0 0 10px;font-size:15px;display:flex;justify-content:space-between;align-items:center;}
+  .day .kcal{font-size:12px;color:var(--muted);font-weight:400}
+  .meal{display:flex;gap:10px;padding:9px 0;border-top:1px dashed var(--line);}
+  .meal:first-of-type{border-top:none}
+  .meal .tag{font-size:12px;color:var(--muted);width:42px;flex:none}
+  .meal .body{flex:1}
+  .meal .name{font-weight:600}
+  .meal .meta{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--brand-soft);color:var(--brand);margin-left:6px;vertical-align:middle}
+  .badge.batch{background:#fff4e5;color:var(--warn)}
+  .steps{font-size:13px;color:var(--muted);margin-top:4px;display:none}
+  .steps.open{display:block}
+  .link{color:var(--brand);cursor:pointer;font-size:13px;user-select:none}
+  .shop-group{margin-bottom:14px}
+  .shop-group h4{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
+  .shop-group h4 .dot{width:10px;height:10px;border-radius:3px;background:var(--brand)}
+  .item{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--line)}
+  .item:first-child{border-top:none}
+  .item input{width:18px;height:18px;flex:none}
+  .item.done span{text-decoration:line-through;color:var(--muted)}
+  .item .nm{flex:1;min-width:80px}
+  .item .q{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--brand);font-size:13px;font-weight:600}
+  .item .nt{width:100%;font-size:11px;color:var(--muted);padding-left:28px;margin-top:1px}
+  .batch-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);border-left:4px solid var(--warn)}
+  .batch-card h4{margin:0 0 4px;font-size:15px}
+  .batch-card .sv{font-size:12px;color:var(--warn);margin-bottom:6px}
+  .adj-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+  .adj-row:first-of-type{border-top:none}
+  .adj-name{width:96px;flex:none;font-weight:600}
+  .adj-k input,.adj-q input{width:64px;padding:5px 6px;text-align:center}
+  .adj-x{color:var(--muted)}
+  .adj-sub{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+  .tip{background:var(--brand-soft);border-radius:11px;padding:12px;font-size:13px;color:#0b6b50;line-height:1.7}
+  .muted{color:var(--muted);font-size:13px}
+  .hidden{display:none!important}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:24px;line-height:1.8}
+
+  /* AI 搭配建议 */
+  .ai-reason{margin-top:14px;background:linear-gradient(135deg,#eef4ff,#f3eaff);border:1px solid #d6e2ff;border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.7;color:#22324a}
+  .ai-reason b{color:#5b3fd6}
+
+  /* AI 教练对话 */
+  .coach{display:flex;flex-direction:column;gap:10px}
+  .chat{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow-y:auto;padding:4px 2px}
+  .msg{max-width:86%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+  .msg.user{background:var(--brand);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+  .msg.ai{background:var(--card);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px;box-shadow:var(--shadow)}
+  .chat-input{display:flex;gap:8px}
+  .chat-input input{flex:1}
+  .coach .muted{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🥗</div>
+    <div>
+      <h1>减脂餐规划器</h1>
+      <p>填一次身体数据，出一周菜单 + 采购清单，周末集中做</p>
+    </div>
+  </header>
+
+  <!-- 1. 身体数据 -->
+  <section class="card">
+    <h2><span class="n">1</span>我的身体数据</h2>
+    <div class="grid">
+      <div><label>性别</label>
+        <select id="gender"><option value="f">女</option><option value="m">男</option></select>
+      </div>
+      <div><label>年龄</label><input id="age" type="number" value="28" /></div>
+      <div><label>身高 (cm)</label><input id="height" type="number" value="165" /></div>
+      <div><label>体重 (kg)</label><input id="weight" type="number" value="62" /></div>
+      <div><label>体脂率 (%) 选填</label><input id="bf" type="number" placeholder="如 28" /></div>
+      <div><label>日常活动量</label>
+        <select id="activity">
+          <option value="1.2">久坐（几乎不运动）</option>
+          <option value="1.375" selected>轻度（每周 1-3 次）</option>
+          <option value="1.55">中度（每周 3-5 次）</option>
+          <option value="1.725">高强度（每周 6-7 次）</option>
+        </select>
+      </div>
+      <div><label>减脂速度</label>
+        <select id="deficit">
+          <option value="300">温和（每周约减 0.25kg）</option>
+          <option value="500" selected>标准（每周约减 0.4kg）</option>
+          <option value="700">激进（每周约减 0.6kg）</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. 饮食习惯 -->
+  <section class="card">
+    <h2><span class="n">2</span>饮食习惯与忌口</h2>
+    <div class="row" style="margin-bottom:12px">
+      <label class="switch"><input id="nospicy" type="checkbox" checked><span class="track"></span></label>
+      <span>不吃辣（本库默认全为不辣菜品）</span>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <label class="switch"><input id="snack" type="checkbox"><span class="track"></span></label>
+      <span>加一顿加餐（下午小食）</span>
+    </div>
+    <div><label>不吃的东西（点选常见项，或自己填，逗号分隔）</label></div>
+    <div class="chips" id="quickChips">
+      <span class="chip" data-g="牛肉">不吃牛肉</span>
+      <span class="chip" data-g="海鲜">不吃海鲜</span>
+      <span class="chip" data-g="内脏">不吃内脏</span>
+      <span class="chip" data-g="香菜">不吃香菜</span>
+    </div>
+    <input id="dislikes" style="margin-top:10px" placeholder="例如：香菜, 洋葱, 韭菜" />
+    <p class="muted" style="margin:8px 0 0">提示：菜谱全部为中式家常、低脂少油做法，符合减脂需求。</p>
+  </section>
+
+  <!-- 2.5 AI 设置（可选） -->
+  <section class="card" id="aiCard">
+    <h2><span class="n">✨</span>AI 设置（可选）</h2>
+    <p class="muted" style="margin:0 0 12px">填了自家的模型 Key，就能用 AI 生成更贴合你的菜单，并在 App 里随时问 AI 饮食问题。Key 仅存于你本机浏览器，不会上传到任何服务器。</p>
+    <div class="grid">
+      <div><label>服务商</label>
+        <select id="aiProvider">
+          <option value="deepseek">DeepSeek</option>
+          <option value="openai">OpenAI</option>
+          <option value="qwen">通义千问 Qwen</option>
+          <option value="custom">自定义</option>
+        </select>
+      </div>
+      <div><label>模型名</label><input id="aiModel" value="deepseek-chat" /></div>
+    </div>
+    <div style="margin-top:10px"><label>API Key</label>
+      <div style="display:flex;gap:8px">
+        <input id="aiKey" type="password" placeholder="sk-..." style="flex:1" autocomplete="off" />
+        <button class="btn ghost sm" id="aiKeyShow" type="button">显示</button>
+      </div>
+    </div>
+    <div style="margin-top:10px"><label>Base URL</label><input id="aiBase" value="https://api.deepseek.com/v1" /></div>
+    <div class="row" style="margin-top:12px;gap:10px;flex-wrap:wrap">
+      <label class="switch"><input id="aiGen" type="checkbox" checked><span class="track"></span></label>
+      <span>用 AI 生成一周计划（已填 Key 时生效，否则用本地算法）</span>
+      <button class="btn ghost sm" id="aiTest" type="button" style="margin-left:auto">测试连接</button>
+    </div>
+    <div id="aiMsg" class="muted" style="margin-top:8px;min-height:18px"></div>
+  </section>
+
+  <button class="btn" id="genBtn">生成我的一周备餐计划</button>
+
+  <!-- 结果区 -->
+  <section id="result" class="hidden">
+    <div class="card">
+      <h2><span class="n">3</span>你的热量方案</h2>
+      <div class="summary" id="statBox"></div>
+      <div id="aiReason" class="ai-reason" style="display:none"></div>
+    </div>
+
+    <div class="card" id="buyBannerCard" style="display:none">
+      <div class="tip" id="buyBanner" style="cursor:pointer"></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab on" data-pane="menu">📅 一周菜单</div>
+      <div class="tab" data-pane="shop">🛒 采购清单</div>
+      <div class="tab" data-pane="batch">♨️ 批量预做</div>
+      <div class="tab" data-pane="forecast">📊 本周预测</div>
+      <div class="tab" data-pane="coach">🤖 AI 教练</div>
+    </div>
+
+    <div class="pane on" id="pane-menu"></div>
+    <div class="pane" id="pane-shop"></div>
+    <div class="pane" id="pane-batch"></div>
+    <div class="pane" id="pane-forecast"></div>
+    <div class="pane" id="pane-coach"></div>
+
+    <div class="row" style="margin-top:16px;gap:10px">
+      <button class="btn ghost sm" id="regenBtn">重新生成</button>
+      <button class="btn ghost sm" id="printBtn">打印 / 存为 PDF</button>
+    </div>
+  </section>
+
+  <footer>
+    数据仅保存在你本机浏览器，不会上传。<br>
+    营养值为按常见做法估算，仅供参考，不作为医疗建议。
+  </footer>
+</div>
+
+<script>
+/* ============ 菜谱库（中式 · 低脂 · 不辣） ============ */
+// cat: 肉蛋水产 / 豆制品 / 蔬菜 / 菌菇 / 主食杂粮 / 水果 / 调料 / 其他
+const RECIPES = [
+  /* —— 早餐 —— */
+  {id:"b1",name:"燕麦牛奶粥",meal:"b",batch:false,kcal:320,P:14,F:8,C:45,groups:[],
+   ing:[["燕麦",40,"g","主食杂粮"],["牛奶",250,"ml","其他"]],steps:"燕麦加牛奶小火煮 3 分钟，可撒少许肉桂。"},
+  {id:"b2",name:"水煮蛋+全麦面包+无糖豆浆",meal:"b",batch:false,kcal:360,P:22,F:12,C:38,groups:[],
+   ing:[["鸡蛋",2,"个","肉蛋水产"],["全麦面包",2,"片","主食杂粮"],["无糖豆浆",300,"ml","豆制品"]],steps:"鸡蛋水煮 8 分钟，配面包与温豆浆。"},
+  {id:"b3",name:"蒸红薯+鸡蛋+凉拌黄瓜",meal:"b",batch:true,kcal:300,P:14,F:6,C:45,groups:[],
+   ing:[["红薯",150,"g","主食杂粮"],["鸡蛋",1,"个","肉蛋水产"],["黄瓜",100,"g","蔬菜"]],steps:"红薯蒸 20 分钟；鸡蛋同煮；黄瓜拍碎加醋少许凉拌。"},
+  {id:"b4",name:"鸡胸蔬菜三明治",meal:"b",batch:false,kcal:380,P:30,F:10,C:40,groups:[],
+   ing:[["全麦面包",2,"片","主食杂粮"],["鸡胸肉",80,"g","肉蛋水产"],["生菜",50,"g","蔬菜"],["番茄",50,"g","蔬菜"]],steps:"鸡胸水煮撕条，夹入面包与蔬菜，少酱。"},
+  {id:"b5",name:"紫薯+无糖酸奶+杏仁",meal:"b",batch:true,kcal:310,P:14,F:9,C:40,groups:[],
+   ing:[["紫薯",150,"g","主食杂粮"],["无糖酸奶",150,"g","其他"],["杏仁",15,"g","其他"]],steps:"紫薯蒸 18 分钟，配酸奶与杏仁。"},
+  {id:"b6",name:"小米粥+煮蛋+拌菠菜",meal:"b",batch:true,kcal:290,P:13,F:7,C:40,groups:[],
+   ing:[["小米",40,"g","主食杂粮"],["鸡蛋",1,"个","肉蛋水产"],["菠菜",100,"g","蔬菜"]],steps:"小米煮 15 分钟；菠菜焯水拌蒜蓉（少油）。"},
+  {id:"b7",name:"牛奶+香蕉+蛋白粉",meal:"b",batch:false,kcal:330,P:28,F:6,C:40,groups:[],
+   ing:[["牛奶",250,"ml","其他"],["香蕉",1,"根","水果"],["蛋白粉",30,"g","其他"]],steps:"牛奶与蛋白粉冲匀，配香蕉。"},
+  {id:"b8",name:"杂粮粥+茶叶蛋+小番茄",meal:"b",batch:true,kcal:300,P:13,F:6,C:45,groups:[],
+   ing:[["杂粮米",40,"g","主食杂粮"],["鸡蛋",1,"个","肉蛋水产"],["小番茄",100,"g","蔬菜"]],steps:"杂粮米煮 20 分钟；鸡蛋加茶叶卤制；配小番茄。"},
+  {id:"b9",name:"蔬菜鸡蛋饼",meal:"b",batch:false,kcal:340,P:18,F:12,C:38,groups:[],
+   ing:[["鸡蛋",2,"个","肉蛋水产"],["面粉",30,"g","主食杂粮"],["胡萝卜",50,"g","蔬菜"],["葱花",5,"g","调料"]],steps:"蔬菜切碎与蛋、少量面粉混合，少油煎成饼。"},
+  {id:"b10",name:"嫩豆腐脑(少油)+全麦馒头",meal:"b",batch:true,kcal:300,P:16,F:8,C:38,groups:[],
+   ing:[["嫩豆腐",200,"g","豆制品"],["全麦馒头",1,"个","主食杂粮"],["葱/酱油",5,"g","调料"]],steps:"嫩豆腐蒸热，淋少许酱油葱花。"},
+
+  /* —— 午/晚 主菜 —— */
+  {id:"m1",name:"清蒸鲈鱼",meal:"ld",batch:true,kcal:280,P:40,F:8,C:0,groups:["海鲜"],
+   ing:[["鲈鱼",200,"g","肉蛋水产"],["姜",10,"g","调料"],["葱",10,"g","调料"]],steps:"鱼身铺姜葱，蒸 8 分钟，淋少许蒸鱼豉油。"},
+  {id:"m2",name:"白灼虾",meal:"ld",batch:false,kcal:200,P:38,F:3,C:2,groups:["海鲜"],
+   ing:[["虾仁",200,"g","肉蛋水产"],["姜",5,"g","调料"]],steps:"水沸下姜与虾，煮 2 分钟捞出。"},
+  {id:"m3",name:"鸡胸炒西兰花",meal:"ld",batch:false,kcal:320,P:38,F:8,C:20,groups:[],
+   ing:[["鸡胸肉",150,"g","肉蛋水产"],["西兰花",200,"g","蔬菜"],["蒜",5,"g","调料"]],steps:"鸡胸切片少油煎熟，下西兰花与蒜翻炒。"},
+  {id:"m4",name:"番茄炒蛋(少油)",meal:"ld",batch:true,kcal:260,P:14,F:12,C:18,groups:[],
+   ing:[["番茄",200,"g","蔬菜"],["鸡蛋",2,"个","肉蛋水产"]],steps:"蛋液少油炒散盛出，番茄炒出汁再合炒。"},
+  {id:"m5",name:"芹菜炒牛肉",meal:"ld",batch:false,kcal:340,P:34,F:12,C:14,groups:["牛肉"],
+   ing:[["牛里脊",120,"g","肉蛋水产"],["芹菜",150,"g","蔬菜"],["蒜",5,"g","调料"]],steps:"牛肉少油快炒，下芹菜蒜翻炒断生。"},
+  {id:"m6",name:"蒜蓉蒸娃娃菜",meal:"ld",batch:true,kcal:160,P:6,F:8,C:16,groups:[],
+   ing:[["娃娃菜",250,"g","蔬菜"],["蒜",10,"g","调料"]],steps:"娃娃菜铺盘，撒蒜蓉蒸 8 分钟。"},
+  {id:"m7",name:"香菇蒸鸡(去皮)",meal:"ld",batch:true,kcal:300,P:34,F:10,C:8,groups:[],
+   ing:[["鸡腿肉(去皮)",150,"g","肉蛋水产"],["香菇",80,"g","菌菇"],["姜",5,"g","调料"]],steps:"鸡肉与香菇加姜蒸 15 分钟。"},
+  {id:"m8",name:"鲫鱼豆腐汤",meal:"ld",batch:true,kcal:240,P:34,F:8,C:6,groups:["海鲜"],
+   ing:[["鲫鱼",150,"g","肉蛋水产"],["豆腐",150,"g","豆制品"],["姜",5,"g","调料"],["葱",5,"g","调料"]],steps:"鱼少油煎后加水豆腐姜葱煮汤。"},
+  {id:"m9",name:"白切鸡(去皮)",meal:"ld",batch:true,kcal:290,P:36,F:10,C:0,groups:[],
+   ing:[["鸡肉",150,"g","肉蛋水产"],["姜",5,"g","调料"],["葱",5,"g","调料"]],steps:"鸡肉煮熟过冰水，蘸姜葱酱（少盐）。"},
+  {id:"m10",name:"虾仁蒸蛋",meal:"ld",batch:true,kcal:230,P:26,F:9,C:8,groups:["海鲜"],
+   ing:[["鸡蛋",2,"个","肉蛋水产"],["虾仁",80,"g","肉蛋水产"]],steps:"蛋液加水打散，摆虾仁蒸 10 分钟。"},
+  {id:"m11",name:"清蒸鳕鱼",meal:"ld",batch:true,kcal:260,P:38,F:8,C:0,groups:["海鲜"],
+   ing:[["鳕鱼",180,"g","肉蛋水产"],["姜",5,"g","调料"],["葱",5,"g","调料"]],steps:"鳕鱼铺姜葱蒸 8 分钟。"},
+  {id:"m12",name:"西葫芦炒蛋",meal:"ld",batch:false,kcal:220,P:14,F:10,C:14,groups:[],
+   ing:[["西葫芦",200,"g","蔬菜"],["鸡蛋",2,"个","肉蛋水产"]],steps:"蛋少油炒散，下西葫芦翻炒。"},
+  {id:"m13",name:"凉拌鸡丝",meal:"ld",batch:true,kcal:260,P:34,F:8,C:6,groups:[],
+   ing:[["鸡胸肉",120,"g","肉蛋水产"],["黄瓜",100,"g","蔬菜"],["蒜/醋",5,"g","调料"]],steps:"鸡胸煮熟撕丝，与黄瓜丝加醋蒜拌匀。"},
+  {id:"m14",name:"清炒虾仁(黄瓜玉米)",meal:"ld",batch:false,kcal:240,P:30,F:5,C:14,groups:["海鲜"],
+   ing:[["虾仁",150,"g","肉蛋水产"],["黄瓜",100,"g","蔬菜"],["玉米粒",50,"g","蔬菜"]],steps:"虾仁少油快炒，下黄瓜玉米翻匀。"},
+  {id:"m15",name:"家常豆腐(少油)",meal:"ld",batch:true,kcal:240,P:18,F:12,C:14,groups:[],
+   ing:[["老豆腐",200,"g","豆制品"],["青椒",50,"g","蔬菜"],["蒜",5,"g","调料"]],steps:"豆腐少油煎金黄，下青椒蒜轻烧。"},
+  {id:"m16",name:"萝卜炖牛腩(瘦)",meal:"ld",batch:true,kcal:320,P:30,F:12,C:18,groups:["牛肉"],
+   ing:[["牛腩(瘦)",120,"g","肉蛋水产"],["白萝卜",150,"g","蔬菜"],["姜",5,"g","调料"]],steps:"牛腩与萝卜姜同炖 40 分钟，撇油。"},
+  {id:"m17",name:"蒸南瓜",meal:"ld",batch:true,kcal:120,P:3,F:0,C:28,groups:[],
+   ing:[["南瓜",200,"g","蔬菜"]],steps:"南瓜切块蒸 12 分钟。"},
+  {id:"m18",name:"芦笋炒虾仁",meal:"ld",batch:false,kcal:230,P:30,F:6,C:10,groups:["海鲜"],
+   ing:[["芦笋",150,"g","蔬菜"],["虾仁",120,"g","肉蛋水产"]],steps:"虾仁少油炒，下芦笋翻炒断生。"},
+  {id:"m19",name:"豆腐菌菇汤",meal:"ld",batch:true,kcal:150,P:14,F:6,C:10,groups:[],
+   ing:[["嫩豆腐",150,"g","豆制品"],["金针菇",100,"g","菌菇"],["鸡蛋",1,"个","肉蛋水产"]],steps:"水沸下豆腐菌菇，淋蛋液成汤。"},
+  {id:"m20",name:"煎鸡胸+糙米",meal:"ld",batch:false,kcal:380,P:38,F:8,C:40,groups:[],
+   ing:[["鸡胸肉",150,"g","肉蛋水产"],["糙米",60,"g","主食杂粮"]],steps:"鸡胸少油煎熟；糙米煮熟。"},
+  {id:"m21",name:"清蒸龙利鱼",meal:"ld",batch:true,kcal:220,P:36,F:6,C:0,groups:["海鲜"],
+   ing:[["龙利鱼",180,"g","肉蛋水产"],["姜",5,"g","调料"],["葱",5,"g","调料"]],steps:"龙利鱼铺姜葱蒸 8 分钟。"},
+  {id:"m22",name:"番茄龙利鱼片",meal:"ld",batch:true,kcal:240,P:34,F:6,C:10,groups:["海鲜"],
+   ing:[["龙利鱼",150,"g","肉蛋水产"],["番茄",150,"g","蔬菜"]],steps:"番茄炒汁，下鱼片煮熟。"},
+
+  /* —— 主食 / 杂粮 —— */
+  {id:"s1",name:"糙米饭",meal:"st",batch:true,kcal:210,P:5,F:2,C:43,groups:[],
+   ing:[["糙米",60,"g","主食杂粮"]],steps:"糙米洗净煮熟（可一次煮多份冷藏）。"},
+  {id:"s2",name:"蒸红薯",meal:"st",batch:true,kcal:130,P:2,F:0,C:30,groups:[],
+   ing:[["红薯",150,"g","主食杂粮"]],steps:"红薯蒸 20 分钟。"},
+  {id:"s3",name:"水煮玉米",meal:"st",batch:true,kcal:180,P:6,F:2,C:38,groups:[],
+   ing:[["玉米",1,"根","主食杂粮"]],steps:"玉米水煮 12 分钟。"},
+  {id:"s4",name:"蒸紫薯",meal:"st",batch:true,kcal:130,P:2,F:0,C:30,groups:[],
+   ing:[["紫薯",150,"g","主食杂粮"]],steps:"紫薯蒸 18 分钟。"},
+  {id:"s5",name:"荞麦面",meal:"st",batch:false,kcal:170,P:6,F:1,C:35,groups:[],
+   ing:[["荞麦面",50,"g","主食杂粮"]],steps:"面煮熟过凉水，配菜拌少许酱油。"},
+  {id:"s6",name:"杂粮饭",meal:"st",batch:true,kcal:210,P:5,F:2,C:43,groups:[],
+   ing:[["杂粮米",60,"g","主食杂粮"]],steps:"杂粮米煮熟。"},
+
+  /* —— 加餐 —— */
+  {id:"k1",name:"无糖酸奶+蓝莓",meal:"k",batch:false,kcal:150,P:10,F:3,C:18,groups:[],
+   ing:[["无糖酸奶",150,"g","其他"],["蓝莓",50,"g","水果"]],steps:"酸奶配蓝莓。"},
+  {id:"k2",name:"苹果",meal:"k",batch:true,kcal:95,P:0,F:0,C:25,groups:[],
+   ing:[["苹果",1,"个","水果"]],steps:"洗净直接吃。"},
+  {id:"k3",name:"杏仁(一小把)",meal:"k",batch:true,kcal:90,P:3,F:8,C:3,groups:[],
+   ing:[["杏仁",15,"g","其他"]],steps:"约 10 粒。"},
+  {id:"k4",name:"水煮蛋",meal:"k",batch:true,kcal:70,P:6,F:5,C:1,groups:[],
+   ing:[["鸡蛋",1,"个","肉蛋水产"]],steps:"水煮 8 分钟。"},
+  {id:"k5",name:"小番茄",meal:"k",batch:true,kcal:30,P:1,F:0,C:6,groups:[],
+   ing:[["小番茄",150,"g","蔬菜"]],steps:"洗净即食。"},
+  {id:"k6",name:"牛奶",meal:"k",batch:false,kcal:130,P:8,F:5,C:12,groups:[],
+   ing:[["牛奶",250,"ml","其他"]],steps:"温饮。"}
+];
+
+const BREAKFAST = RECIPES.filter(r=>r.meal==="b");
+const LUNCHDINNER = RECIPES.filter(r=>r.meal==="ld");
+const STAPLES = RECIPES.filter(r=>r.meal==="st");
+const SNACKS = RECIPES.filter(r=>r.meal==="k");
+
+/* ============ 采购取整：按真实购买单位 ============ */
+const BUY = {
+  /* 肉 / 水产：按斤或包装 */
+  "鸡胸肉":{step:500,pu:"g",pack:"包(500g)"},
+  "牛里脊":{step:500,pu:"g",pack:"份(500g/斤)"},
+  "牛腩(瘦)":{step:500,pu:"g",pack:"份(500g/斤)"},
+  "鸡肉":{step:500,pu:"g",pack:"份(500g/斤)"},
+  "鸡腿肉(去皮)":{step:500,pu:"g",pack:"份(500g/斤)"},
+  "虾仁":{step:250,pu:"g",pack:"盒(250g)"},
+  "鲈鱼":{step:500,pu:"g",pack:"条(约500g)"},
+  "鲫鱼":{step:500,pu:"g",pack:"条(约500g)"},
+  "鳕鱼":{step:200,pu:"g",pack:"块(200g)"},
+  "龙利鱼":{step:200,pu:"g",pack:"块(200g)"},
+  "鸡蛋":{step:10,pu:"个",pack:"板(10个)"},
+  /* 菌菇：按盒 */
+  "香菇":{step:200,pu:"g",pack:"盒(200g)"},
+  "金针菇":{step:200,pu:"g",pack:"盒(200g)"},
+  /* 豆制品：按盒/块 */
+  "嫩豆腐":{step:400,pu:"g",pack:"盒(400g)"},
+  "老豆腐":{step:400,pu:"g",pack:"盒(400g)"},
+  "豆腐":{step:400,pu:"g",pack:"盒(400g)"},
+  /* 主食杂粮 */
+  "糙米":{step:500,pu:"g",pack:"袋(500g)"},
+  "杂粮米":{step:500,pu:"g",pack:"袋(500g)"},
+  "小米":{step:500,pu:"g",pack:"袋(500g)"},
+  "荞麦面":{step:500,pu:"g",pack:"袋(500g)"},
+  "燕麦":{step:500,pu:"g",pack:"袋(500g)"},
+  "红薯":{step:500,pu:"g",pack:"斤(500g)"},
+  "紫薯":{step:500,pu:"g",pack:"斤(500g)"},
+  "玉米":{step:1,pu:"根",pack:"根"},
+  "全麦面包":{step:1,pu:"片",pack:"片"},
+  "全麦馒头":{step:1,pu:"个",pack:"个"},
+  "面粉":{step:500,pu:"g",pack:"袋(500g)"},
+  /* 水果 */
+  "香蕉":{step:1,pu:"根",pack:"根(约1斤≈4根)"},
+  "苹果":{step:1,pu:"个",pack:"个"},
+  "蓝莓":{step:125,pu:"g",pack:"盒(125g)"},
+  "小番茄":{step:500,pu:"g",pack:"斤(500g)"},
+  /* 其他：饮品 / 坚果 / 蛋白粉 */
+  "牛奶":{step:250,pu:"ml",pack:"盒(250ml)"},
+  "无糖酸奶":{step:150,pu:"g",pack:"杯(150g)"},
+  "无糖豆浆":{step:300,pu:"ml",pack:"杯(300ml)"},
+  "杏仁":{step:100,pu:"g",pack:"袋(100g)"},
+  "蛋白粉":{staple:true}
+};
+const CAT_DEFAULT = {
+  "肉蛋水产":{step:500,pu:"g",pack:"份(500g/斤)"},
+  "蔬菜":{step:500,pu:"g",pack:"斤(500g)"},
+  "菌菇":{step:200,pu:"g",pack:"盒(200g)"},
+  "豆制品":{step:400,pu:"g",pack:"盒(400g)"},
+  "主食杂粮":{step:500,pu:"g",pack:"袋(500g)"},
+  "水果":{step:500,pu:"g",pack:"斤(500g)"},
+  "其他":{step:500,pu:"g",pack:"份"}
+};
+/* 把「本周累计用量」换算成「建议购买量」（向上取整到正常购买单位） */
+function buyAdvice(name, total, unit, cat){
+  if(cat==="调料") return {buy:"常备", note:"家里一般都有，缺了顺手买 1 块/1 把"};
+  const b = BUY[name] || CAT_DEFAULT[cat];
+  if(b && b.staple) return {buy:"常备", note:"家里一般已有，不必专门买"};
+  if(!b){
+    const q = (unit==="个"||unit==="根"||unit==="片") ? Math.ceil(total) : Math.ceil(total/50)*50;
+    return {buy:`约 ${q}${unit}`, note:`本周约用 ${Math.round(total)}${unit}`};
+  }
+  let packs = Math.ceil(total / b.step);
+  if(packs<1) packs=1;
+  const buyText = (b.step===1 && b.pu!=="g") ? `${packs}${b.pu}` : `${packs}${b.pack}`;
+  return {buy:buyText, note:`本周约用 ${Math.round(total)}${unit}`};
+}
+
+/* ============ 计算 ============ */
+function compute(p){
+  const w=+p.weight, h=+p.height, age=+p.age, act=+p.activity, def=+p.deficit;
+  let bmr;
+  if(p.bf && +p.bf>0){
+    const lbm = w*(1-(+p.bf)/100);
+    bmr = 370 + 21.6*lbm;            // Katch-McArdle
+  }else{
+    bmr = (p.gender==="m")
+      ? 10*w+6.25*h-5*age+5
+      : 10*w+6.25*h-5*age-161;       // Mifflin-St Jeor
+  }
+  const tdee = bmr*act;
+  let target = tdee - def;
+  target = Math.max(1200, Math.min(target, tdee*0.8)); // 安全下限
+  const protein = Math.round((p.bf && +p.bf>0 ? 2.0*w*(1-(+p.bf)/100) : 1.8*w));
+  const fat = Math.round(target*0.25/9);
+  const carb = Math.round((target - protein*4 - fat*9)/4);
+  return {bmr:Math.round(bmr),tdee:Math.round(tdee),target:Math.round(target),protein,fat,carb,def};
+}
+
+/* ============ 忌口过滤 ============ */
+function buildFilter(prefs){
+  const tokens = (prefs.text||"").split(/[,，、\s]+/).map(s=>s.trim()).filter(Boolean);
+  const groups = prefs.groups||[];
+  return function(r){
+    if(r.groups && r.groups.some(g=>groups.includes(g))) return false;
+    if(tokens.length){
+      const hay = (r.name+" "+r.ing.map(i=>i[0]).join(" "));
+      if(tokens.some(t=>hay.includes(t))) return false;
+    }
+    return true;
+  };
+}
+
+/* ============ 生成周计划 ============ */
+function generatePlan(p, prefs){
+  const c = compute(p);
+  const daily = c.target;
+  const hasSnack = prefs.snack;
+  const pct = hasSnack ? {b:0.26,l:0.34,d:0.30,s:0.10} : {b:0.30,l:0.40,d:0.30};
+  const filter = buildFilter(prefs);
+  const usage = {}, lastDay = {};
+  function pick(pool, targetKcal, dayIdx){
+    let cands = pool.filter(filter);
+    if(!cands.length) cands = pool.slice();
+    const scored = cands.map(r=>{
+      let s = Math.abs(r.kcal-targetKcal)/targetKcal;
+      s += (usage[r.id]||0)*0.45;
+      if(lastDay[r.id]===dayIdx-1) s += 0.3;
+      return {r,s};
+    }).sort((a,b)=>a.s-b.s);
+    const ch = scored[0].r;
+    usage[ch.id]=(usage[ch.id]||0)+1; lastDay[ch.id]=dayIdx;
+    return ch;
+  }
+  const days=[];
+  for(let d=0; d<7; d++){
+    const bK=Math.round(daily*pct.b), lK=Math.round(daily*pct.l), dK=Math.round(daily*pct.d);
+    const sK=hasSnack?Math.round(daily*pct.s):0;
+    const bf=pick(BREAKFAST,bK,d);
+    const lMain=pick(LUNCHDINNER,Math.round(lK*0.62),d);
+    const lSta=pick(STAPLES,Math.round(lK*0.38),d);
+    const dMain=pick(LUNCHDINNER,Math.round(dK*0.62),d);
+    const dSta=pick(STAPLES,Math.round(dK*0.38),d);
+    const snack=hasSnack?pick(SNACKS,sK,d):null;
+    days.push({d,bf,l:{main:lMain,sta:lSta},dn:{main:dMain,sta:dSta},snack});
+  }
+  return {days,c,prefs};
+}
+
+/* ============ 渲染 ============ */
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const WEEK=["周一","周二","周三","周四","周五","周六","周日"];
+let PLAN=null, CHECKED={};
+// 现实变量：额外摄入（零食/奶茶/咖啡）与运动消耗（每周）
+const DEFAULT_ADJ={
+  extra:[{id:"milktea",label:"奶茶",kcal:300,qty:0},
+         {id:"coffee",label:"咖啡(加糖)",kcal:80,qty:0},
+         {id:"snack",label:"零食",kcal:200,qty:0}],
+  exercise:[{id:"run",label:"跑步",kcal:300,qty:0},
+            {id:"gym",label:"力量训练",kcal:220,qty:0},
+            {id:"bike",label:"骑行",kcal:250,qty:0}]
+};
+let ADJ=JSON.parse(JSON.stringify(DEFAULT_ADJ));
+function loadADJ(){ try{ const a=JSON.parse(localStorage.getItem("jp_adj")||"null"); if(a&&a.extra&&a.exercise) ADJ=a; }catch(e){} }
+
+function dishRow(label, r, showSteps){
+  if(!r) return "";
+  const badge = r.batch?'<span class="badge batch">可批量</span>':'';
+  const stepsId = "st-"+r.id+"-"+Math.random().toString(36).slice(2,6);
+  return `<div class="meal">
+    <div class="tag">${label}</div>
+    <div class="body">
+      <div class="name">${r.name}${badge}</div>
+      <div class="meta">${r.kcal} kcal · 蛋白${r.P}g 脂肪${r.F}g 碳水${r.C}g
+        ${showSteps?`· <span class="link" onclick="toggleSteps('${stepsId}')">做法</span>`:""}</div>
+      <div class="steps" id="${stepsId}">${r.steps}</div>
+    </div></div>`;
+}
+window.toggleSteps=id=>{document.getElementById(id).classList.toggle("open");};
+
+function renderMenu(){
+  const box=$("#pane-menu"); box.innerHTML="";
+  PLAN.days.forEach(day=>{
+    const all=[day.bf,day.l.main,day.l.sta,day.dn.main,day.dn.sta,day.snack].filter(Boolean);
+    const kcal=all.reduce((a,r)=>a+r.kcal,0);
+    const P=all.reduce((a,r)=>a+r.P,0);
+    const el=document.createElement("div"); el.className="day";
+    el.innerHTML=`<h3>${WEEK[day.d]}<span class="kcal">约 ${kcal} kcal · 蛋白 ${P}g</span></h3>
+      ${dishRow("早餐",day.bf,true)}
+      ${dishRow("午餐",day.l.main,true)}
+      ${dishRow("主食",day.l.sta,false)}
+      ${dishRow("晚餐",day.dn.main,true)}
+      ${dishRow("主食",day.dn.sta,false)}
+      ${day.snack?dishRow("加餐",day.snack,false):""}`;
+    box.appendChild(el);
+  });
+}
+
+function renderShop(){
+  const map={}; // name -> {qty,unit,cat}
+  const add=(name,qty,unit,cat)=>{
+    if(!map[name]) map[name]={qty:0,unit,cat};
+    map[name].qty += qty;
+  };
+  PLAN.days.forEach(day=>{
+    [day.bf,day.l.main,day.l.sta,day.dn.main,day.dn.sta,day.snack].filter(Boolean)
+      .forEach(r=>r.ing.forEach(([n,q,u,c])=>add(n,q,u,c)));
+  });
+  const order=["肉蛋水产","豆制品","蔬菜","菌菇","主食杂粮","水果","调料","其他"];
+  const groups={};
+  Object.entries(map).forEach(([n,v])=>{(groups[v.cat]=groups[v.cat]||[]).push([n,v]);});
+  const box=$("#pane-shop"); box.innerHTML="";
+  const total=Object.keys(map).length;
+  let done=0;
+  let copyText="【本周采购清单 · 已按实际购买量取整】\n";
+  order.forEach(cat=>{
+    if(!groups[cat]) return;
+    const g=document.createElement("div"); g.className="shop-group";
+    let rows="";
+    copyText+=`\n${cat}：\n`;
+    groups[cat].sort((a,b)=>b[1].qty-a[1].qty).forEach(([n,v])=>{
+      const isDone=CHECKED[n]?"done":"";
+      if(CHECKED[n]) done++;
+      const adv=buyAdvice(n, v.qty, v.unit, v.cat);
+      rows+=`<label class="item ${isDone}"><input type="checkbox" data-ing="${n}" ${CHECKED[n]?"checked":""}/><span class="nm">${n}</span><span class="q">${adv.buy}</span><span class="nt">${adv.note}</span></label>`;
+      copyText+=`  - ${n}：${adv.buy}（${adv.note}）\n`;
+    });
+    g.innerHTML=`<h4><span class="dot"></span>${cat}（${groups[cat].length}）</h4>${rows}`;
+    box.appendChild(g);
+  });
+  const head=document.createElement("div");
+  head.className="tip"; head.style.marginBottom="12px";
+  head.innerHTML=`共 <b>${total}</b> 种食材，已采购 <b>${done}</b> 种。勾选后状态会保存在本机。
+    <div style="margin-top:8px"><button class="btn sm" id="copyShop">复制采购清单</button></div>`;
+  box.insertBefore(head, box.firstChild);
+  const copyBtn=box.querySelector("#copyShop");
+  if(copyBtn) copyBtn.addEventListener("click",()=>{
+    const text=copyText.trim();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(()=>{copyBtn.textContent="已复制 ✓";setTimeout(()=>copyBtn.textContent="复制采购清单",1500);},
+        ()=>{fallbackCopy(text);copyBtn.textContent="已复制 ✓";});
+    }else{ fallbackCopy(text); copyBtn.textContent="已复制 ✓"; }
+  });
+  box.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener("change",e=>{
+      const n=e.target.dataset.ing;
+      CHECKED[n]=e.target.checked;
+      e.target.closest(".item").classList.toggle("done",e.target.checked);
+      save();
+    });
+  });
+  // 顶部常驻采购速览条（生成后即见，点一下跳到清单）
+  const banner=$("#buyBanner");
+  if(banner){
+    banner.innerHTML=`🛒 <b>本周需采购约 ${total} 种食材</b>。点此查看完整采购清单（已按实际购买量取整，调料为常备）。`;
+    banner.onclick=()=>switchPane("shop");
+    $("#buyBannerCard").style.display="";
+  }
+}
+function fallbackCopy(text){
+  const ta=document.createElement("textarea"); ta.value=text;
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+function renderBatch(){
+  const cnt={};
+  PLAN.days.forEach(day=>{
+    [day.bf,day.l.main,day.l.sta,day.dn.main,day.dn.sta,day.snack].filter(Boolean)
+      .forEach(r=>{ if(r.batch){ cnt[r.id]=(cnt[r.id]||0)+1; }});
+  });
+  const box=$("#pane-batch"); box.innerHTML="";
+  const tip=document.createElement("div"); tip.className="tip";
+  tip.innerHTML="♨️ <b>周末集中备餐法</b>：下方标「可批量」的菜，建议周日一次性做 2–3 份，分装冷藏（2–3 天）/冷冻（更久），工作日加热即食，省去每天做饭的精神消耗。绿叶菜与海鲜现做更新鲜。";
+  box.appendChild(tip);
+  const ids=Object.keys(cnt);
+  if(!ids.length){ box.innerHTML+='<p class="muted">本周无可批量预做的菜品。</p>'; return; }
+  ids.forEach(id=>{
+    const r=RECIPES.find(x=>x.id===id);
+    const el=document.createElement("div"); el.className="batch-card";
+    el.innerHTML=`<h4>${r.name}</h4><div class="sv">本周出现 ${cnt[id]} 次 · 建议一次做 ${cnt[id]} 份</div>
+      <div class="meta muted">${r.kcal}kcal · 蛋白${r.P}g · 食材：${r.ing.map(i=>i[0]).join("、")}</div>
+      <div class="meta" style="margin-top:6px">做法：${r.steps}</div>`;
+    box.appendChild(el);
+  });
+}
+
+function weeklyPlanned(){
+  let s=0;
+  PLAN.days.forEach(d=>{
+    [d.bf,d.l.main,d.l.sta,d.dn.main,d.dn.sta,d.snack].filter(Boolean).forEach(r=>s+=r.kcal);
+  });
+  return s;
+}
+function sumAdj(arr){ return arr.reduce((a,x)=>a+x.kcal*(+x.qty||0),0); }
+
+function renderForecast(){
+  const box=$("#pane-forecast"); box.innerHTML="";
+  const c=PLAN.c;
+  const weekly=weeklyPlanned();
+  // 输入区
+  function rowHTML(arr,kind){
+    return arr.map(x=>{
+      const sub=x.kcal*(+x.qty||0);
+      return `<div class="adj-row">
+        <span class="adj-name">${x.label}</span>
+        <span class="adj-k"><input type="number" min="0" value="${x.kcal}" data-kind="${kind}" data-id="${x.id}" data-field="kcal"> kcal</span>
+        <span class="adj-x">×</span>
+        <span class="adj-q"><input type="number" min="0" value="${x.qty}" data-kind="${kind}" data-id="${x.id}" data-field="qty"> 次/周</span>
+        <span class="adj-sub" id="sub-${kind}-${x.id}">= ${sub} kcal</span>
+      </div>`;
+    }).join("");
+  }
+  box.innerHTML=`
+    <div class="card">
+      <h2><span class="n">＋</span>额外摄入（零食 / 奶茶 / 咖啡等）</h2>
+      <p class="muted" style="margin:0 0 10px">把你这周打算额外吃喝的填进去，热量会自动计入。每项可改热量和次数。</p>
+      ${rowHTML(ADJ.extra,"extra")}
+    </div>
+    <div class="card">
+      <h2><span class="n">－</span>运动消耗（计划外的额外运动）</h2>
+      <p class="muted" style="margin:0 0 10px">TDEE 已含日常活动，这里只填额外的运动。可改每次热量和次数。</p>
+      ${rowHTML(ADJ.exercise,"exercise")}
+    </div>
+    <div class="card">
+      <h2><span class="n">＝</span>本周预测</h2>
+      <div class="summary" id="fcBox"></div>
+      <div class="tip" id="fcVerdict" style="margin-top:12px"></div>
+    </div>`;
+  // 绑定输入
+  box.querySelectorAll('input[data-kind]').forEach(inp=>{
+    inp.addEventListener("input",e=>{
+      const {kind,id,field}=e.target.dataset;
+      const arr = kind==="extra"?ADJ.extra:ADJ.exercise;
+      const item=arr.find(x=>x.id===id);
+      item[field]=e.target.value===""?"":+e.target.value;
+      const sub=item.kcal*(+item.qty||0);
+      const subEl=box.querySelector("#sub-"+kind+"-"+id);
+      if(subEl) subEl.textContent="= "+sub+" kcal";
+      updateForecastSummary();
+      save();
+    });
+  });
+  updateForecastSummary();
+}
+function updateForecastSummary(){
+  const c=PLAN.c, weekly=weeklyPlanned();
+  const tdee7=c.tdee*7;
+  const extra=sumAdj(ADJ.extra), exercise=sumAdj(ADJ.exercise);
+  const net=tdee7+exercise-weekly-extra;       // 正=赤字(减)
+  const changeKg=net/7700;                      // 7700 kcal ≈ 1kg 脂肪
+  const fc=$("#fcBox"); if(!fc) return;
+  fc.innerHTML=`
+    <div class="stat"><b>${weekly}</b><span>计划周摄入(kcal)</span></div>
+    <div class="stat"><b>${tdee7}</b><span>基础周消耗(kcal)</span></div>
+    <div class="stat"><b class="${extra>0?'':''}">${extra}</b><span>额外摄入(kcal)</span></div>
+    <div class="stat"><b>${exercise}</b><span>运动额外消耗(kcal)</span></div>
+    <div class="stat"><b style="color:${net>=0?'var(--brand)':'var(--warn)'}">${net>=0?'赤字':'盈余'} ${Math.abs(net)}</b><span>净周热量差</span></div>
+    <div class="stat"><b style="color:${changeKg>=0?'var(--brand)':'var(--warn)'}">${changeKg>=0?'减':'增'} ${Math.abs(changeKg).toFixed(2)}</b><span>预计体重变化(kg)</span></div>`;
+  const v=$("#fcVerdict");
+  const weeksPerKg=Math.abs(changeKg)>0?(1/Math.abs(changeKg)):0;
+  if(net>=0){
+    v.innerHTML=`✅ 照这个吃 + 动，本周预计<b>减重 ${Math.abs(changeKg).toFixed(2)} kg</b>（约每 ${weeksPerKg.toFixed(1)} 周减 1 kg）。`;
+  }else{
+    v.innerHTML=`⚠️ 额外摄入超过了消耗，本周预计<b>增重 ${Math.abs(changeKg).toFixed(2)} kg</b>。可减少零食奶茶，或加点运动把净差拉回负数。`;
+  }
+}
+
+function renderStats(){
+  const c=PLAN.c;
+  const weekly=weeklyPlanned();
+  const baseChange=(c.tdee*7-weekly)/7700;
+  $("#statBox").innerHTML=`
+    <div class="stat"><b>${c.bmr}</b><span>基础代谢 BMR</span></div>
+    <div class="stat"><b>${c.tdee}</b><span>每日总消耗</span></div>
+    <div class="stat"><b>${c.target}</b><span>减脂目标热量/天</span></div>
+    <div class="stat"><b>${c.protein}g</b><span>蛋白质目标</span></div>
+    <div class="stat"><b>${c.fat}g</b><span>脂肪</span></div>
+    <div class="stat"><b>${c.carb}g</b><span>碳水</span></div>
+    <div class="stat"><b>${weekly}</b><span>计划周摄入(kcal)</span></div>
+    <div class="stat"><b style="color:${baseChange>=0?'var(--brand)':'var(--warn)'}">${baseChange>=0?'减':'增'} ${Math.abs(baseChange).toFixed(2)}</b><span>预计周减重(计划内)</span></div>`;
+}
+
+/* ============ 状态存取 ============ */
+function save(){
+  try{
+    localStorage.setItem("jp_profile", JSON.stringify(readProfile()));
+    localStorage.setItem("jp_checked", JSON.stringify(CHECKED));
+    localStorage.setItem("jp_adj", JSON.stringify(ADJ));
+    if(PLAN) localStorage.setItem("jp_plan", JSON.stringify(PLAN));
+  }catch(e){}
+}
+function readProfile(){
+  return {
+    gender:$("#gender").value, age:$("#age").value, height:$("#height").value,
+    weight:$("#weight").value, bf:$("#bf").value, activity:$("#activity").value,
+    deficit:$("#deficit").value,
+    nospicy:$("#nospicy").checked, snack:$("#snack").checked,
+    text:$("#dislikes").value, groups:getGroups()
+  };
+}
+function getGroups(){
+  return $$("#quickChips .chip.on").map(c=>c.dataset.g);
+}
+
+/* ============ AI（可选，用你自己的 Key） ============ */
+const AI_PRESETS = {
+  deepseek:{base:"https://api.deepseek.com/v1", model:"deepseek-chat"},
+  openai:{base:"https://api.openai.com/v1", model:"gpt-4o-mini"},
+  qwen:{base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen-plus"},
+  custom:{base:"", model:""}
+};
+function loadAI(){
+  try{ const a=JSON.parse(localStorage.getItem("jp_ai")||"null"); if(a) return a; }catch(e){}
+  return {provider:"deepseek",key:"",model:"deepseek-chat",base:"https://api.deepseek.com/v1",gen:true};
+}
+function saveAI(){ try{ localStorage.setItem("jp_ai",JSON.stringify(AI)); }catch(e){} }
+let AI = loadAI();
+function setAiMsg(t, warn){
+  const m=$("#aiMsg"); if(!m) return;
+  m.textContent=t; m.style.color = warn?"var(--warn)":"";
+}
+function callLLM(messages, json){
+  const url = AI.base.replace(/\/+$/,"") + "/chat/completions";
+  const body = {model:AI.model, messages, temperature:0.7};
+  if(json) body.response_format = {type:"json_object"};
+  return fetch(url,{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+AI.key},
+    body:JSON.stringify(body)
+  }).then(r=>{
+    if(!r.ok) return r.text().then(t=>{ throw new Error("接口返回 "+r.status+"："+(t||"").slice(0,160)); });
+    return r.json();
+  }).then(d=>{
+    const c = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+    if(!c) throw new Error("接口未返回内容");
+    return c;
+  });
+}
+function extractJSON(s){
+  s=(s||"").trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+  const a=s.indexOf("{"), b=s.lastIndexOf("}");
+  if(a>=0 && b>a) s=s.slice(a,b+1);
+  return s;
+}
+function catalogText(){
+  return RECIPES.map(r=>{
+    const mn={b:"早餐",ld:"午/晚主菜",st:"主食",k:"加餐"}[r.meal]||r.meal;
+    return `${r.id} | ${r.name} | ${mn} | ${r.kcal}kcal | 忌口:${r.groups.join("/")||"无"}`;
+  }).join("\n");
+}
+async function generatePlanAI(p, prefs, baseline){
+  const c=baseline.c;
+  const sys=`你是一位专业减脂餐营养师。请从给定菜谱库中选出 7 天（周一至周日）的早/午主菜/午主食/晚主菜/晚主食/加餐(可选)组合。
+规则：1) 每天总热量尽量接近目标 ${c.target}kcal（早~${Math.round(c.target*0.3)}、午~${Math.round(c.target*0.4)}、晚~${Math.round(c.target*0.3)}、加餐~${Math.round(c.target*0.1)}）；2) 严格避开忌口组；3) 同周菜品尽量多样、相邻两天主菜不重复；4) 只能使用菜谱库里的 id。
+只输出 JSON：{"reasoning":"一句搭配说明","days":[{"bf":"id","lMain":"id","lSta":"id","dMain":"id","dSta":"id","snack":"id 或 null"}, ...共7个]}`;
+  const user=`身体数据：性别${p.gender==="m"?"男":"女"}、${p.age}岁、${p.height}cm、${p.weight}kg、体脂率${p.bf||"无"}、活动系数${p.activity}、每日减脂缺口${p.deficit}kcal。
+目标：每日 ${c.target}kcal，蛋白质 ${c.protein}g。
+忌口组：${(prefs.groups||[]).join("、")||"无"}；额外忌口：${prefs.text||"无"}；加餐：${prefs.snack?"要":"不要"}。
+菜谱库：\n${catalogText()}`;
+  const content=await callLLM([{role:"system",content:sys},{role:"user",content:user}], true);
+  const obj=JSON.parse(extractJSON(content));
+  const byId=id=>RECIPES.find(r=>r.id===id);
+  const days=[];
+  for(let i=0;i<7;i++){
+    const d=(obj.days&&obj.days[i])||{};
+    const pick=(key,pool,def)=>{const r=byId(d[key]); return (r&&pool.includes(r.meal))?r:def;};
+    const bd=baseline.days[i];
+    days.push({d:i,
+      bf:pick("bf",["b"],bd.bf),
+      l:{main:pick("lMain",["ld"],bd.l.main), sta:pick("lSta",["st"],bd.l.sta)},
+      dn:{main:pick("dMain",["ld"],bd.dn.main), sta:pick("dSta",["st"],bd.dn.sta)},
+      snack: prefs.snack?pick("snack",["k"],bd.snack):null
+    });
+  }
+  return {days,c,prefs,aiReason:obj.reasoning||"",ai:true};
+}
+function escapeHtml(s){return (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
+function pushMsg(role,text){
+  const log=$("#chatLog"); if(!log) return null;
+  const el=document.createElement("div");
+  el.className="msg "+role; el.textContent=text;
+  log.appendChild(el); log.scrollTop=log.scrollHeight;
+  return el;
+}
+async function coachAsk(userText, aiEl){
+  const c=PLAN.c, p=readProfile();
+  const planText=PLAN.days.map(d=>{
+    const a=[`${WEEK[d.d]}：早 ${d.bf.name}`];
+    a.push(`午 ${d.l.main.name}+${d.l.sta.name}`);
+    a.push(`晚 ${d.dn.main.name}+${d.dn.sta.name}`);
+    if(d.snack) a.push(`加餐 ${d.snack.name}`);
+    return a.join("，");
+  }).join("\n");
+  const sys=`你是用户的减脂餐私人教练。用户身体数据：性别${p.gender==="m"?"男":"女"}、目标每日 ${c.target}kcal、蛋白质 ${c.protein}g、减脂缺口 ${p.deficit}kcal/天。
+本周计划如下：
+${planText}
+请基于以上信息，用简洁中文回答用户关于饮食、食材替换、营养搭配的问题。不要编造菜谱库外的新菜；替换建议优先从已有菜里选。回答仅供参考，不构成医疗建议。`;
+  try{
+    const content=await callLLM([{role:"system",content:sys},{role:"user",content:userText}], false);
+    if(aiEl) aiEl.textContent=content;
+    const log=$("#chatLog"); if(log) log.scrollTop=log.scrollHeight;
+  }catch(e){ if(aiEl) aiEl.textContent="⚠️ AI 调用失败："+e.message; }
+}
+function renderCoach(){
+  const reason=$("#aiReason");
+  if(PLAN && PLAN.aiReason){
+    reason.style.display="";
+    reason.innerHTML=`<b>🤖 AI 搭配建议：</b>${escapeHtml(PLAN.aiReason)}`;
+  }else if(reason){ reason.style.display="none"; }
+  const pane=$("#pane-coach");
+  if(!pane || pane.dataset.built) return;
+  pane.dataset.built="1";
+  pane.innerHTML=`<div class="coach">
+      <div class="chat" id="chatLog"></div>
+      <div class="chat-input">
+        <input id="chatInput" placeholder="问 AI：比如「鸡肉吃腻了换什么」「怎么补足蛋白」「这周为什么这么搭」" />
+        <button class="btn sm" id="chatSend">发送</button>
+      </div>
+      <p class="muted">AI 会结合你的身体数据和本周计划回答，仅供参考。</p>
+    </div>`;
+  const input=pane.querySelector("#chatInput");
+  const send=pane.querySelector("#chatSend");
+  const fire=()=>{
+    const v=input.value.trim(); if(!v) return;
+    pushMsg("user",v); input.value="";
+    if(!AI.key){ pushMsg("ai","还没填 API Key～先去顶部「✨ AI 设置」填上你自己的模型 Key，才能问 AI 哦。"); return; }
+    const aiEl=pushMsg("ai","🤖 思考中…");
+    coachAsk(v, aiEl);
+  };
+  send.addEventListener("click",fire);
+  input.addEventListener("keydown",e=>{ if(e.key==="Enter") fire(); });
+}
+
+/* ============ 事件 ============ */
+function doGenerate(){
+  const p=readProfile();
+  const prefs={snack:p.snack, text:p.text, groups:p.groups};
+  const btn=$("#genBtn"), reg=$("#regenBtn"), txt=btn.textContent;
+  btn.disabled=true; if(reg) reg.disabled=true; btn.textContent="生成中…";
+  const baseline=generatePlan(p,prefs);
+  let plan=baseline;
+  if(AI.key && AI.gen){
+    const run=async()=>{
+      try{
+        plan=await generatePlanAI(p,prefs,baseline);
+        setAiMsg("✅ 已用 AI 生成计划（基于你的身体数据与忌口）", false);
+      }catch(e){
+        plan=baseline;
+        setAiMsg("⚠️ AI 生成失败，已用本地算法兜底："+e.message, true);
+      }
+      finish();
+    };
+    run();
+  }else{
+    setAiMsg(AI.key? "（已关闭 AI 生成，使用本地算法）" : "（未配置 Key，使用本地算法；填了 Key 可在上方开启 AI 生成）", false);
+    finish();
+  }
+  function finish(){
+    PLAN=plan; CHECKED={};
+    $("#result").classList.remove("hidden");
+    renderStats(); renderMenu(); renderShop(); renderBatch(); renderForecast(); renderCoach();
+    save();
+    btn.disabled=false; if(reg) reg.disabled=false; btn.textContent=txt;
+    if($("#result").scrollIntoView) $("#result").scrollIntoView({behavior:"smooth"});
+  }
+}
+
+$("#genBtn").addEventListener("click",doGenerate);
+$("#regenBtn").addEventListener("click",doGenerate);
+$$("#quickChips .chip").forEach(ch=>{
+  ch.addEventListener("click",()=>ch.classList.toggle("on"));
+});
+function switchPane(name){
+  $$(".tab").forEach(x=>x.classList.remove("on"));
+  $$(".pane").forEach(x=>x.classList.remove("on"));
+  const t=document.querySelector('.tab[data-pane="'+name+'"]');
+  if(t) t.classList.add("on");
+  const p=$("#pane-"+name); if(p) p.classList.add("on");
+}
+$$(".tab").forEach(t=>{ t.addEventListener("click",()=>{
+  switchPane(t.dataset.pane);
+  if(t.dataset.pane==="coach" && PLAN) renderCoach();
+}); });
+$("#printBtn").addEventListener("click",()=>window.print());
+
+/* AI 设置交互 */
+function applyAIPreset(){
+  const pre=AI_PRESETS[$("#aiProvider").value];
+  if(pre && pre.base){ $("#aiModel").value=pre.model; $("#aiBase").value=pre.base; }
+}
+function syncAIfromUI(){
+  AI.provider=$("#aiProvider").value;
+  AI.key=$("#aiKey").value.trim();
+  AI.model=$("#aiModel").value.trim();
+  AI.base=$("#aiBase").value.trim();
+  AI.gen=$("#aiGen").checked;
+  saveAI();
+}
+$("#aiProvider").addEventListener("change",()=>{ applyAIPreset(); syncAIfromUI(); });
+["#aiKey","#aiModel","#aiBase"].forEach(s=>$(s).addEventListener("input",syncAIfromUI));
+$("#aiGen").addEventListener("change",syncAIfromUI);
+$("#aiKeyShow").addEventListener("click",()=>{
+  const i=$("#aiKey"); i.type = i.type==="password"?"text":"password";
+  $("#aiKeyShow").textContent = i.type==="password"?"显示":"隐藏";
+});
+$("#aiTest").addEventListener("click",async()=>{
+  syncAIfromUI();
+  const m=$("#aiMsg");
+  if(!AI.key){ m.textContent="请先填写 API Key"; m.style.color="var(--warn)"; return; }
+  m.textContent="连接测试中…"; m.style.color="";
+  try{
+    const c=await callLLM([{role:"user",content:"你好，请用一句话回复：已连通。"}], false);
+    m.textContent="✅ 连接成功："+c.slice(0,40); m.style.color="var(--brand)";
+  }catch(e){ m.textContent="❌ "+e.message; m.style.color="var(--warn)"; }
+});
+
+/* ============ 启动时恢复 ============ */
+(function restore(){
+  try{
+    const pf=JSON.parse(localStorage.getItem("jp_profile")||"null");
+    if(pf){
+      $("#gender").value=pf.gender; $("#age").value=pf.age; $("#height").value=pf.height;
+      $("#weight").value=pf.weight; $("#bf").value=pf.bf||""; $("#activity").value=pf.activity;
+      $("#deficit").value=pf.deficit; $("#nospicy").checked=pf.nospicy;
+      $("#snack").checked=pf.snack; $("#dislikes").value=pf.text||"";
+      (pf.groups||[]).forEach(g=>{const c=document.querySelector(`#quickChips .chip[data-g="${g}"]`);if(c)c.classList.add("on");});
+    }
+    CHECKED=JSON.parse(localStorage.getItem("jp_checked")||"{}");
+    loadADJ();
+    const pl=JSON.parse(localStorage.getItem("jp_plan")||"null");
+    if(pl){ PLAN=pl; $("#result").classList.remove("hidden");
+      renderStats(); renderMenu(); renderShop(); renderBatch(); renderForecast(); renderCoach(); }
+  }catch(e){}
+  /* 恢复 AI 设置到界面 */
+  try{
+    if(AI.provider) $("#aiProvider").value=AI.provider;
+    $("#aiKey").value=AI.key||"";
+    $("#aiModel").value=AI.model||"";
+    $("#aiBase").value=AI.base||"";
+    $("#aiGen").checked=AI.gen!==false;
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
