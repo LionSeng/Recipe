@@ -98,6 +98,78 @@
   .chat-input{display:flex;gap:8px}
   .chat-input input{flex:1}
   .coach .muted{margin:0}
+
+  /* ===================== 优化新增 ===================== */
+  /* 通用微交互 */
+  .btn{transition:transform .08s ease, box-shadow .18s ease, background .15s ease}
+  .btn:not(.ghost):hover{box-shadow:0 6px 16px rgba(15,157,119,.28)}
+  .btn.ghost:hover{background:var(--brand-soft)}
+  .tab{transition:.15s ease}
+  .chip{transition:.15s ease}
+  .card{transition:box-shadow .2s ease}
+  .day{transition:transform .12s ease, box-shadow .2s ease}
+  .day:hover{box-shadow:0 6px 20px rgba(16,24,40,.08)}
+
+  /* 菜单：每餐图标 + 换/锁操作 */
+  .meal{position:relative;transition:background .18s ease;border-radius:8px}
+  .meal .tag{width:48px;flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted);padding-top:2px}
+  .meal .tag .ic{font-size:19px;line-height:1}
+  .meal .body{flex:1;min-width:0}
+  .meal .ops{display:flex;flex-direction:column;gap:5px;flex:none;align-self:center}
+  .op-btn{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer;line-height:1;white-space:nowrap;transition:.15s ease}
+  .op-btn:hover{border-color:var(--brand);color:var(--brand)}
+  .op-btn:active{transform:scale(.93)}
+  .op-btn.locked{background:var(--brand);border-color:var(--brand);color:#fff}
+  .meal.locked-row{background:linear-gradient(90deg,var(--brand-soft),transparent)}
+
+  /* 采购进度条 */
+  .progress{height:9px;border-radius:99px;background:#e3e8ef;overflow:hidden;margin:10px 0 2px}
+  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#0f9d77,#4cd0a4);border-radius:99px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+
+  /* 历史方案模态框 */
+  .modal-mask{position:fixed;inset:0;background:rgba(16,24,40,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s ease;backdrop-filter:blur(2px)}
+  .modal-mask.on{opacity:1;pointer-events:auto}
+  .modal{position:relative;background:var(--card);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:20px 18px 26px;max-height:82vh;overflow-y:auto;transform:translateY(24px);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+  .modal-mask.on .modal{transform:translateY(0)}
+  .modal h3{margin:0 0 4px;font-size:17px}
+  .plan-item{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:10px;transition:.15s}
+  .plan-item:hover{border-color:var(--brand)}
+  .plan-item .pi-body{flex:1;min-width:0}
+  .plan-item .pi-name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .plan-item .pi-meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .plan-item .pi-ops{display:flex;gap:6px;flex:none}
+
+  /* 骨架屏 */
+  .skeleton{background:linear-gradient(90deg,#eef2f6 25%,#f6f8fa 37%,#eef2f6 63%);background-size:400% 100%;animation:sk 1.2s ease infinite}
+  @keyframes sk{0%{background-position:100% 0}100%{background-position:-100% 0}}
+  .day-skeleton{height:150px;border-radius:14px;margin-bottom:12px}
+
+  /* Toast */
+  #toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(10px);background:#1f2933;color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;pointer-events:none;transition:.25s ease;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* 结果区淡入 */
+  #result:not(.hidden){animation:fadeIn .3s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  @media(min-width:560px){
+    .modal-mask{align-items:center}
+    .modal{border-radius:18px}
+  }
+  /* 移动端优化 */
+  @media(max-width:560px){
+    .wrap{padding:12px 12px 84px}
+    header{padding:14px 2px 8px}
+    header h1{font-size:18px}
+    .card{padding:15px}
+    .tabs{gap:6px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -12px;padding:10px 12px}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{flex:none;white-space:nowrap;padding:8px 15px}
+    .op-btn{padding:6px 10px}
+    .meal .tag{width:40px}
+    .stat b{font-size:18px}
+    .summary{grid-template-columns:repeat(2,1fr)}
+  }
 </style>
 </head>
 <body>
@@ -221,9 +293,21 @@
 
     <div class="row" style="margin-top:16px;gap:10px">
       <button class="btn ghost sm" id="regenBtn">重新生成</button>
+      <button class="btn ghost sm" id="saveBtn">💾 保存方案</button>
+      <button class="btn ghost sm" id="histBtn">🗂 历史方案</button>
       <button class="btn ghost sm" id="printBtn">打印 / 存为 PDF</button>
     </div>
   </section>
+
+  <!-- 历史方案模态框 -->
+  <div class="modal-mask" id="histMask">
+    <div class="modal">
+      <h3>🗂 历史方案</h3>
+      <p class="muted" style="margin:2px 0 8px">保存的周计划都存在本机浏览器，可随时载入或对比不同版本。</p>
+      <div id="histList"></div>
+      <button class="btn ghost sm" style="margin-top:16px" id="histClose">关闭</button>
+    </div>
+  </div>
 
   <footer>
     数据仅保存在你本机浏览器，不会上传。<br>
@@ -494,20 +578,91 @@ const DEFAULT_ADJ={
 let ADJ=JSON.parse(JSON.stringify(DEFAULT_ADJ));
 function loadADJ(){ try{ const a=JSON.parse(localStorage.getItem("jp_adj")||"null"); if(a&&a.extra&&a.exercise) ADJ=a; }catch(e){} }
 
-function dishRow(label, r, showSteps){
+const MEAL_ICON={"早餐":"🌅","午餐":"🍚","晚餐":"🌙","主食":"🍠","加餐":"🍎"};
+function dishRow(label, r, showSteps, slot){
   if(!r) return "";
   const badge = r.batch?'<span class="badge batch">可批量</span>':'';
   const stepsId = "st-"+r.id+"-"+Math.random().toString(36).slice(2,6);
-  return `<div class="meal">
-    <div class="tag">${label}</div>
+  let ops="", lockedCls="";
+  if(slot){
+    const locked = PLAN && PLAN.locks && PLAN.locks[slot.d+"-"+slot.key];
+    lockedCls = locked?" locked-row":"";
+    ops=`<div class="ops">
+      <button class="op-btn" title="从同类菜里换一道" onclick="replaceDish(${slot.d},'${slot.key}')">🔄 换</button>
+      <button class="op-btn${locked?' locked':''}" title="锁定后，重新生成不会改动这道" onclick="toggleLock(${slot.d},'${slot.key}')">${locked?'🔒 已锁':'🔓 锁'}</button>
+    </div>`;
+  }
+  return `<div class="meal${lockedCls}">
+    <div class="tag"><span class="ic">${MEAL_ICON[label]||"🍽️"}</span>${label}</div>
     <div class="body">
       <div class="name">${r.name}${badge}</div>
       <div class="meta">${r.kcal} kcal · 蛋白${r.P}g 脂肪${r.F}g 碳水${r.C}g
         ${showSteps?`· <span class="link" onclick="toggleSteps('${stepsId}')">做法</span>`:""}</div>
       <div class="steps" id="${stepsId}">${r.steps}</div>
-    </div></div>`;
+    </div>
+    ${ops}
+  </div>`;
 }
 window.toggleSteps=id=>{document.getElementById(id).classList.toggle("open");};
+
+/* ============ 菜品替换 / 锁定 ============ */
+const POOL_BY_SLOT={bf:BREAKFAST,lMain:LUNCHDINNER,lSta:STAPLES,dMain:LUNCHDINNER,dSta:STAPLES,snack:SNACKS};
+function getSlot(day,key){
+  switch(key){
+    case"bf":return day.bf;
+    case"lMain":return day.l.main;
+    case"lSta":return day.l.sta;
+    case"dMain":return day.dn.main;
+    case"dSta":return day.dn.sta;
+    case"snack":return day.snack;
+  }
+}
+function setSlot(day,key,r){
+  switch(key){
+    case"bf":day.bf=r;break;
+    case"lMain":day.l.main=r;break;
+    case"lSta":day.l.sta=r;break;
+    case"dMain":day.dn.main=r;break;
+    case"dSta":day.dn.sta=r;break;
+    case"snack":day.snack=r;break;
+  }
+}
+window.replaceDish=function(d,key){
+  if(!PLAN) return;
+  const day=PLAN.days[d];
+  const pool=POOL_BY_SLOT[key]||[];
+  const cur=getSlot(day,key);
+  const filter=buildFilter(PLAN.prefs||{});
+  let cands=pool.filter(filter).filter(r=>!cur||r.id!==cur.id);
+  if(!cands.length) cands=pool.filter(r=>!cur||r.id!==cur.id);
+  if(!cands.length) return;
+  const base=cur?cur.kcal:0;
+  cands.sort((a,b)=>Math.abs(a.kcal-base)-Math.abs(b.kcal-base));
+  const top=cands.slice(0,Math.min(5,cands.length));
+  const ch=top[Math.floor(Math.random()*top.length)];
+  setSlot(day,key,ch);
+  renderStats(); renderMenu(); renderShop(); renderBatch(); renderForecast();
+  save();
+};
+window.toggleLock=function(d,key){
+  if(!PLAN) return;
+  if(!PLAN.locks) PLAN.locks={};
+  const k=d+"-"+key;
+  PLAN.locks[k]=!PLAN.locks[k];
+  renderMenu(); save();
+};
+function applyLocks(newPlan, oldPlan){
+  if(!oldPlan || !oldPlan.locks) return;
+  newPlan.locks=Object.assign({}, oldPlan.locks);
+  Object.keys(oldPlan.locks).forEach(k=>{
+    if(!oldPlan.locks[k]) return;
+    const idx=k.indexOf("-");
+    const d=+k.slice(0,idx), key=k.slice(idx+1);
+    if(!oldPlan.days[d] || !newPlan.days[d]) return;
+    const oldR=getSlot(oldPlan.days[d],key);
+    if(oldR) setSlot(newPlan.days[d],key,oldR);
+  });
+}
 
 function renderMenu(){
   const box=$("#pane-menu"); box.innerHTML="";
@@ -517,12 +672,12 @@ function renderMenu(){
     const P=all.reduce((a,r)=>a+r.P,0);
     const el=document.createElement("div"); el.className="day";
     el.innerHTML=`<h3>${WEEK[day.d]}<span class="kcal">约 ${kcal} kcal · 蛋白 ${P}g</span></h3>
-      ${dishRow("早餐",day.bf,true)}
-      ${dishRow("午餐",day.l.main,true)}
-      ${dishRow("主食",day.l.sta,false)}
-      ${dishRow("晚餐",day.dn.main,true)}
-      ${dishRow("主食",day.dn.sta,false)}
-      ${day.snack?dishRow("加餐",day.snack,false):""}`;
+      ${dishRow("早餐",day.bf,true,{d:day.d,key:"bf"})}
+      ${dishRow("午餐",day.l.main,true,{d:day.d,key:"lMain"})}
+      ${dishRow("主食",day.l.sta,false,{d:day.d,key:"lSta"})}
+      ${dishRow("晚餐",day.dn.main,true,{d:day.d,key:"dMain"})}
+      ${dishRow("主食",day.dn.sta,false,{d:day.d,key:"dSta"})}
+      ${day.snack?dishRow("加餐",day.snack,false,{d:day.d,key:"snack"}):""}`;
     box.appendChild(el);
   });
 }
@@ -561,8 +716,10 @@ function renderShop(){
   });
   const head=document.createElement("div");
   head.className="tip"; head.style.marginBottom="12px";
-  head.innerHTML=`共 <b>${total}</b> 种食材，已采购 <b>${done}</b> 种。勾选后状态会保存在本机。
-    <div style="margin-top:8px"><button class="btn sm" id="copyShop">复制采购清单</button></div>`;
+  const pct = total ? Math.round(done/total*100) : 0;
+  head.innerHTML=`共 <b>${total}</b> 种食材，已采购 <b>${done}</b> 种（${pct}%）。勾选后状态会保存在本机。
+    <div class="progress"><i style="width:${pct}%"></i></div>
+    <div style="margin-top:10px"><button class="btn sm" id="copyShop">复制采购清单</button></div>`;
   box.insertBefore(head, box.firstChild);
   const copyBtn=box.querySelector("#copyShop");
   if(copyBtn) copyBtn.addEventListener("click",()=>{
@@ -734,6 +891,77 @@ function readProfile(){
 function getGroups(){
   return $$("#quickChips .chip.on").map(c=>c.dataset.g);
 }
+function applyProfile(pf){
+  if(!pf) return;
+  $("#gender").value=pf.gender; $("#age").value=pf.age; $("#height").value=pf.height;
+  $("#weight").value=pf.weight; $("#bf").value=pf.bf||""; $("#activity").value=pf.activity;
+  $("#deficit").value=pf.deficit; $("#nospicy").checked=pf.nospicy;
+  $("#snack").checked=pf.snack; $("#dislikes").value=pf.text||"";
+  $$("#quickChips .chip").forEach(c=>c.classList.remove("on"));
+  (pf.groups||[]).forEach(g=>{const c=document.querySelector(`#quickChips .chip[data-g="${g}"]`);if(c)c.classList.add("on");});
+}
+
+/* ============ Toast 轻提示 ============ */
+function toast(msg){
+  let t=document.getElementById("toast");
+  if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.className="show";
+  clearTimeout(t._t); t._t=setTimeout(()=>{ t.className=""; }, 1600);
+}
+
+/* ============ 方案保存与历史 ============ */
+function getSaved(){ try{ return JSON.parse(localStorage.getItem("jp_saved")||"[]"); }catch(e){ return []; } }
+function setSaved(a){ try{ localStorage.setItem("jp_saved", JSON.stringify(a)); }catch(e){} }
+function saveCurrentPlan(){
+  if(!PLAN){ toast("请先生成一周计划"); return; }
+  const def="方案 "+new Date().toLocaleDateString("zh-CN",{month:"numeric",day:"numeric"})+" "+new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"});
+  const name=prompt("给这套方案起个名字：", def);
+  if(name===null) return;
+  const arr=getSaved();
+  arr.unshift({
+    id:Date.now()+"", name:(name||def).trim(), ts:Date.now(),
+    weekly:weeklyPlanned(), target:PLAN.c.target,
+    profile:readProfile(), plan:PLAN
+  });
+  if(arr.length>30) arr.length=30;
+  setSaved(arr);
+  toast("已保存方案 ✓");
+}
+function openHistory(){
+  const arr=getSaved();
+  const list=$("#histList");
+  if(!arr.length){
+    list.innerHTML='<p class="muted" style="text-align:center;padding:24px 0">还没有保存的方案。<br>生成计划后点「💾 保存方案」即可存档，方便日后对比切换。</p>';
+  }else{
+    list.innerHTML=arr.map(s=>`<div class="plan-item">
+      <div class="pi-body">
+        <div class="pi-name">${escapeHtml(s.name)}</div>
+        <div class="pi-meta">${new Date(s.ts).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})} · 目标 ${s.target||"-"} kcal/天 · 周摄入 ${s.weekly||"-"} kcal</div>
+      </div>
+      <div class="pi-ops">
+        <button class="op-btn" onclick="loadSaved('${s.id}')">载入</button>
+        <button class="op-btn" onclick="delSaved('${s.id}')">删除</button>
+      </div>
+    </div>`).join("");
+  }
+  $("#histMask").classList.add("on");
+}
+window.loadSaved=function(id){
+  const s=getSaved().find(x=>x.id===id);
+  if(!s) return;
+  applyProfile(s.profile);
+  PLAN=s.plan; CHECKED={};
+  $("#result").classList.remove("hidden");
+  renderStats(); renderMenu(); renderShop(); renderBatch(); renderForecast(); renderCoach();
+  save();
+  $("#histMask").classList.remove("on");
+  toast("已载入方案 ✓");
+  if($("#result").scrollIntoView) $("#result").scrollIntoView({behavior:"smooth"});
+};
+window.delSaved=function(id){
+  setSaved(getSaved().filter(x=>x.id!==id));
+  openHistory();
+};
 
 /* ============ AI（可选，用你自己的 Key） ============ */
 const AI_PRESETS = {
@@ -868,11 +1096,15 @@ function renderCoach(){
 function doGenerate(){
   const p=readProfile();
   const prefs={snack:p.snack, text:p.text, groups:p.groups};
+  const oldPlan=PLAN;
   const btn=$("#genBtn"), reg=$("#regenBtn"), txt=btn.textContent;
   btn.disabled=true; if(reg) reg.disabled=true; btn.textContent="生成中…";
   const baseline=generatePlan(p,prefs);
   let plan=baseline;
   if(AI.key && AI.gen){
+    // AI 生成较慢，先展示骨架屏
+    $("#result").classList.remove("hidden");
+    $("#pane-menu").innerHTML='<div class="day-skeleton skeleton"></div>'.repeat(3);
     const run=async()=>{
       try{
         plan=await generatePlanAI(p,prefs,baseline);
@@ -889,6 +1121,7 @@ function doGenerate(){
     finish();
   }
   function finish(){
+    applyLocks(plan, oldPlan);
     PLAN=plan; CHECKED={};
     $("#result").classList.remove("hidden");
     renderStats(); renderMenu(); renderShop(); renderBatch(); renderForecast(); renderCoach();
@@ -915,6 +1148,13 @@ $$(".tab").forEach(t=>{ t.addEventListener("click",()=>{
   if(t.dataset.pane==="coach" && PLAN) renderCoach();
 }); });
 $("#printBtn").addEventListener("click",()=>window.print());
+
+/* 方案保存与历史交互 */
+$("#saveBtn").addEventListener("click",saveCurrentPlan);
+$("#histBtn").addEventListener("click",openHistory);
+$("#histClose").addEventListener("click",()=>$("#histMask").classList.remove("on"));
+$("#histMask").addEventListener("click",e=>{ if(e.target.id==="histMask") $("#histMask").classList.remove("on"); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("#histMask").classList.remove("on"); });
 
 /* AI 设置交互 */
 function applyAIPreset(){
@@ -951,13 +1191,7 @@ $("#aiTest").addEventListener("click",async()=>{
 (function restore(){
   try{
     const pf=JSON.parse(localStorage.getItem("jp_profile")||"null");
-    if(pf){
-      $("#gender").value=pf.gender; $("#age").value=pf.age; $("#height").value=pf.height;
-      $("#weight").value=pf.weight; $("#bf").value=pf.bf||""; $("#activity").value=pf.activity;
-      $("#deficit").value=pf.deficit; $("#nospicy").checked=pf.nospicy;
-      $("#snack").checked=pf.snack; $("#dislikes").value=pf.text||"";
-      (pf.groups||[]).forEach(g=>{const c=document.querySelector(`#quickChips .chip[data-g="${g}"]`);if(c)c.classList.add("on");});
-    }
+    if(pf) applyProfile(pf);
     CHECKED=JSON.parse(localStorage.getItem("jp_checked")||"{}");
     loadADJ();
     const pl=JSON.parse(localStorage.getItem("jp_plan")||"null");
