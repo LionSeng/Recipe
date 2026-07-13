@@ -193,6 +193,16 @@
   .ex-link{color:var(--brand);cursor:pointer;font-size:12.5px;user-select:none;margin-top:auto}
   .ex-link:active{opacity:.6}
 
+  /* 动作库折叠面板 */
+  .ex-lib-head{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;margin:0 0 14px}
+  .ex-lib-head h2{margin:0;flex:1}
+  .ex-lib-status{font-size:12.5px;color:var(--muted);font-weight:400}
+  .ex-lib-arrow{font-size:13px;color:var(--muted);transition:transform .2s}
+  .ex-lib-card.collapsed .ex-lib-arrow{transform:rotate(-90deg)}
+  .ex-lib-card.collapsed .ex-collapse{display:none}
+  .ex-lib-card .ex-collapse{margin-top:2px}
+  .ex-lib-card.collapsed{box-shadow:none}
+
   .train-controls{display:flex;flex-direction:column;gap:12px;margin-bottom:6px}
   .train-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .train-row > .lbl{font-size:13px;color:var(--muted);min-width:60px}
@@ -1202,15 +1212,21 @@ function buildTrainPane(){
   const eqChips = `<span class="chip${EX_STATE.equip===""?" on":""}" data-equip="">全部</span>` +
     eqs.map(e=>`<span class="chip${EX_STATE.equip===e.key?" on":""}" data-equip="${e.key}">${e.label}</span>`).join("");
   pane.innerHTML = `
-    <div class="card">
-      <h2><span class="n">🏋️</span>动作库（精选居家子集）</h2>
-      <div class="ex-filters">
-        <div class="ex-search"><input id="exSearch" placeholder="搜索动作名 / 目标肌肉，如：深蹲、腹肌" /></div>
-        <div><div class="muted" style="margin-bottom:6px">按部位</div><div class="ex-chips" id="exPartChips">${partChips}</div></div>
-        <div><div class="muted" style="margin-bottom:6px">按器械</div><div class="ex-chips" id="exEqChips">${eqChips}</div></div>
-        <div class="ex-count" id="exCount"></div>
+    <div class="card ex-lib-card collapsed" id="exLibCard">
+      <div class="ex-lib-head" id="exLibHead">
+        <h2><span class="n">🏋️</span>动作库（精选居家子集）</h2>
+        <span class="ex-lib-status" id="exLibStatus">已折叠 · 点击展开搜索</span>
+        <span class="ex-lib-arrow">▾</span>
       </div>
-      <div class="ex-grid" id="exGrid"></div>
+      <div class="ex-collapse">
+        <div class="ex-filters">
+          <div class="ex-search"><input id="exSearch" placeholder="搜索动作名 / 目标肌肉，如：深蹲、腹肌" /></div>
+          <div><div class="muted" style="margin-bottom:6px">按部位</div><div class="ex-chips" id="exPartChips">${partChips}</div></div>
+          <div><div class="muted" style="margin-bottom:6px">按器械</div><div class="ex-chips" id="exEqChips">${eqChips}</div></div>
+          <div class="ex-count" id="exCount"></div>
+        </div>
+        <div class="ex-grid" id="exGrid"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -1279,9 +1295,33 @@ function buildTrainPane(){
     });
   }
 
-  renderExGrid();
+  // 动作库默认折叠：首次展开时才渲染网格，避免一次性把 110 张卡片塞入 DOM
+  const libCard=pane.querySelector("#exLibCard");
+  const libHead=pane.querySelector("#exLibHead");
+  if(libHead && libCard){
+    libHead.addEventListener("click", ()=>{
+      const willOpen=libCard.classList.contains("collapsed");
+      libCard.classList.toggle("collapsed");
+      if(willOpen && !libCard.dataset.rendered){
+        renderExGrid();
+        libCard.dataset.rendered="1";
+      }
+      syncExLibStatus();
+    });
+  }
+
   renderTrainPlan();
   updateBurnHint();
+}
+function syncExLibStatus(){
+  const card=$("#exLibCard"); if(!card) return;
+  const st=$("#exLibStatus"); if(!st) return;
+  if(card.classList.contains("collapsed")){
+    st.textContent=`已折叠 · 共 ${EXERCISES.length} 个动作，点击展开`;
+  }else{
+    const n=exFilterList().length;
+    st.textContent=`已展开 · 显示 ${n} / ${EXERCISES.length} 个`;
+  }
 }
 function refreshExChips(){
   const pc=$("#exPartChips"); if(pc) pc.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",(c.dataset.part||"")===EX_STATE.part));
@@ -1292,6 +1332,7 @@ function renderExGrid(){
   const grid=$("#exGrid"); if(!grid) return;
   const list=exFilterList();
   const cnt=$("#exCount"); if(cnt) cnt.textContent=`共 ${list.length} 个动作（已按部位 / 器械 / 搜索筛选）`;
+  syncExLibStatus();
   if(!list.length){ grid.innerHTML='<p class="muted">没有匹配的动作，换个筛选条件试试。</p>'; return; }
   grid.innerHTML = list.map(e=>{
     const sid="exs-"+e.id;
