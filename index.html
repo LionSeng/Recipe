@@ -305,7 +305,7 @@
           <option value="custom">自定义</option>
         </select>
       </div>
-      <div><label>模型名</label><input id="aiModel" value="deepseek-chat" /></div>
+      <div><label>模型名</label><input id="aiModel" value="deepseek-v4-flash" /></div>
     </div>
     <div style="margin-top:10px"><label>API Key</label>
       <div style="display:flex;gap:8px">
@@ -1037,14 +1037,14 @@ window.delSaved=function(id){
 
 /* ============ AI（可选，用你自己的 Key） ============ */
 const AI_PRESETS = {
-  deepseek:{base:"https://api.deepseek.com/v1", model:"deepseek-chat"},
+  deepseek:{base:"https://api.deepseek.com/v1", model:"deepseek-v4-flash"},
   openai:{base:"https://api.openai.com/v1", model:"gpt-4o-mini"},
   qwen:{base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen-plus"},
   custom:{base:"", model:""}
 };
 function loadAI(){
   try{ const a=JSON.parse(localStorage.getItem("jp_ai")||"null"); if(a) return a; }catch(e){}
-  return {provider:"deepseek",key:"",model:"deepseek-chat",base:"https://api.deepseek.com/v1",gen:true};
+  return {provider:"deepseek",key:"",model:"deepseek-v4-flash",base:"https://api.deepseek.com/v1",gen:true};
 }
 function saveAI(){ try{ localStorage.setItem("jp_ai",JSON.stringify(AI)); }catch(e){} }
 let AI = loadAI();
