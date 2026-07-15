@@ -50,6 +50,13 @@
   .day{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
   .day h3{margin:0 0 10px;font-size:15px;display:flex;justify-content:space-between;align-items:center;}
   .day .kcal{font-size:12px;color:var(--muted);font-weight:400}
+  .day-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .day-tabs::-webkit-scrollbar{display:none}
+  .day-tab{flex:none;min-width:66px;padding:8px 10px;border-radius:13px;background:var(--card);border:1px solid var(--line);text-align:center;cursor:pointer;line-height:1.25;transition:transform .12s ease,background .15s ease,border-color .15s ease}
+  .day-tab:active{transform:scale(.96)}
+  .day-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .day-tab .dt{display:block;font-size:13px;font-weight:600}
+  .day-tab .dk{display:block;font-size:11px;opacity:.85;margin-top:2px;font-variant-numeric:tabular-nums}
   .meal{display:flex;gap:10px;padding:9px 0;border-top:1px dashed var(--line);}
   .meal:first-of-type{border-top:none}
   .meal .tag{font-size:12px;color:var(--muted);width:42px;flex:none}
@@ -660,6 +667,7 @@ const $=s=>document.querySelector(s);
 const $$=s=>Array.from(document.querySelectorAll(s));
 const WEEK=["周一","周二","周三","周四","周五","周六","周日"];
 let PLAN=null, CHECKED={};
+let MENU_DAY=((new Date().getDay()+6)%7); // 菜单默认显示今天（周一=0…周日=6）
 // 现实变量：额外摄入（零食/奶茶/咖啡）与运动消耗（每周）
 const DEFAULT_ADJ={
   extra:[{id:"milktea",label:"奶茶",kcal:300,qty:0},
@@ -758,22 +766,54 @@ function applyLocks(newPlan, oldPlan){
   });
 }
 
+function dayKcal(day){
+  const all=[day.bf,day.l.main,day.l.sta,day.dn.main,day.dn.sta,day.snack].filter(Boolean);
+  return {kcal:all.reduce((a,r)=>a+r.kcal,0), P:all.reduce((a,r)=>a+r.P,0)};
+}
 function renderMenu(){
-  const box=$("#pane-menu"); box.innerHTML="";
-  PLAN.days.forEach(day=>{
-    const all=[day.bf,day.l.main,day.l.sta,day.dn.main,day.dn.sta,day.snack].filter(Boolean);
-    const kcal=all.reduce((a,r)=>a+r.kcal,0);
-    const P=all.reduce((a,r)=>a+r.P,0);
-    const el=document.createElement("div"); el.className="day";
-    el.innerHTML=`<h3>${WEEK[day.d]}<span class="kcal">约 ${kcal} kcal · 蛋白 ${P}g</span></h3>
-      ${dishRow("早餐",day.bf,true,{d:day.d,key:"bf"})}
-      ${dishRow("午餐",day.l.main,true,{d:day.d,key:"lMain"})}
-      ${dishRow("主食",day.l.sta,false,{d:day.d,key:"lSta"})}
-      ${dishRow("晚餐",day.dn.main,true,{d:day.d,key:"dMain"})}
-      ${dishRow("主食",day.dn.sta,false,{d:day.d,key:"dSta"})}
-      ${day.snack?dishRow("加餐",day.snack,false,{d:day.d,key:"snack"}):""}`;
-    box.appendChild(el);
+  const box=$("#pane-menu");
+  if(!box.querySelector("#menuDayTabs")){
+    box.innerHTML=`<div class="day-tabs" id="menuDayTabs"></div><div id="menuDayDetail"></div>`;
+    const tabs=box.querySelector("#menuDayTabs");
+    PLAN.days.forEach((day,i)=>{
+      const b=document.createElement("button");
+      b.className="day-tab"; b.dataset.d=i;
+      b.innerHTML=`<span class="dt">${WEEK[day.d]}</span><span class="dk"></span>`;
+      b.addEventListener("click",()=>selectMenuDay(i));
+      tabs.appendChild(b);
+    });
+  }
+  if(MENU_DAY<0||MENU_DAY>=PLAN.days.length) MENU_DAY=0;
+  syncDayChips();
+  renderActiveDay();
+}
+function selectMenuDay(i){
+  MENU_DAY=i;
+  syncDayChips();
+  renderActiveDay();
+}
+function syncDayChips(){
+  const tabs=$("#menuDayTabs"); if(!tabs) return;
+  PLAN.days.forEach((day,i)=>{
+    const b=tabs.children[i]; if(!b) return;
+    const {kcal}=dayKcal(day);
+    b.querySelector(".dk").textContent=kcal+" kcal";
+    b.classList.toggle("on", i===MENU_DAY);
   });
+}
+function renderActiveDay(){
+  const det=$("#menuDayDetail"); if(!det) return;
+  const day=PLAN.days[MENU_DAY]; if(!day) return;
+  const {kcal,P}=dayKcal(day);
+  det.innerHTML=`<div class="day">
+    <h3>${WEEK[day.d]}<span class="kcal">约 ${kcal} kcal · 蛋白 ${P}g</span></h3>
+    ${dishRow("早餐",day.bf,true,{d:day.d,key:"bf"})}
+    ${dishRow("午餐",day.l.main,true,{d:day.d,key:"lMain"})}
+    ${dishRow("主食",day.l.sta,false,{d:day.d,key:"lSta"})}
+    ${dishRow("晚餐",day.dn.main,true,{d:day.d,key:"dMain"})}
+    ${dishRow("主食",day.dn.sta,false,{d:day.d,key:"dSta"})}
+    ${day.snack?dishRow("加餐",day.snack,false,{d:day.d,key:"snack"}):""}
+  </div>`;
 }
 
 function renderShop(){
