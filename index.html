@@ -347,7 +347,6 @@
       <div class="tab" data-pane="batch">♨️ 批量预做</div>
       <div class="tab" data-pane="forecast">📊 本周预测</div>
       <div class="tab" data-pane="train">🏋️ 训练</div>
-      <div class="tab" data-pane="coach">🤖 AI 教练</div>
     </div>
 
     <div class="pane on" id="pane-menu"></div>
@@ -355,7 +354,6 @@
     <div class="pane" id="pane-batch"></div>
     <div class="pane" id="pane-forecast"></div>
     <div class="pane" id="pane-train"></div>
-    <div class="pane" id="pane-coach"></div>
 
     <div class="row" style="margin-top:16px;gap:10px">
       <button class="btn ghost sm" id="regenBtn">重新生成</button>
@@ -364,6 +362,15 @@
       <button class="btn ghost sm" id="printBtn">打印 / 存为 PDF</button>
     </div>
   </section>
+  </main>
+
+  <!-- AI 教练（独立页面，位于计划与资料之间） -->
+  <main id="view-coach" class="view">
+    <div class="card">
+      <h2><span class="n">🤖</span>AI 教练</h2>
+      <p class="muted" style="margin:0 0 12px">随时问 AI 饮食做法、营养搭配，或根据本周计划调整运动。模型 Key 仅存本机浏览器。</p>
+      <div id="coachPane"></div>
+    </div>
   </main>
 
   <!-- 历史方案模态框 -->
@@ -383,6 +390,7 @@
 
   <nav class="bottom-nav">
     <button data-view="plan" class="on">📅<span>计划</span></button>
+    <button data-view="coach">🤖<span>AI 教练</span></button>
     <button data-view="data">⚙️<span>资料</span></button>
   </nav>
 </div>
@@ -1162,28 +1170,35 @@ function pushMsg(role,text){
   return el;
 }
 async function coachAsk(userText, aiEl){
-  if(!PLAN){ if(aiEl) aiEl.textContent="请先生成一周计划，再来问 AI 哦～"; return; }
-  const c=PLAN.c, p=readProfile();
-  const planText=PLAN.days.map(d=>{
-    const a=[`${WEEK[d.d]}：早 ${d.bf.name}`];
-    a.push(`午 ${d.l.main.name}+${d.l.sta.name}`);
-    a.push(`晚 ${d.dn.main.name}+${d.dn.sta.name}`);
-    if(d.snack) a.push(`加餐 ${d.snack.name}`);
-    return a.join("，");
-  }).join("\n");
-  // 本周训练计划（若已生成）
-  let wkText="（本周尚未生成训练计划）";
-  if(WORKOUT && WORKOUT.days && WORKOUT.days.length){
-    wkText=WORKOUT.days.map(d=>`${d.label||("第"+d.n+"天")}：${(d.exs||[]).map(e=>e.name).join("、")||"—"}`).join("\n");
-  }
-  const sys=`你是用户的减脂餐 + 运动私人教练。用户身体数据：性别${p.gender==="m"?"男":"女"}、${p.age}岁、${p.height}cm、${p.weight}kg、目标每日 ${c.target}kcal、蛋白质 ${c.protein}g、减脂缺口 ${p.deficit}kcal/天。
+  const p=readProfile();
+  let sys=`你是用户的减脂餐 + 运动私人教练。`;
+  if(PLAN){
+    const c=PLAN.c;
+    const planText=PLAN.days.map(d=>{
+      const a=[`${WEEK[d.d]}：早 ${d.bf.name}`];
+      a.push(`午 ${d.l.main.name}+${d.l.sta.name}`);
+      a.push(`晚 ${d.dn.main.name}+${d.dn.sta.name}`);
+      if(d.snack) a.push(`加餐 ${d.snack.name}`);
+      return a.join("，");
+    }).join("\n");
+    // 本周训练计划（若已生成）
+    let wkText="（本周尚未生成训练计划）";
+    if(WORKOUT && WORKOUT.days && WORKOUT.days.length){
+      wkText=WORKOUT.days.map(d=>`${d.label||("第"+d.n+"天")}：${(d.exs||[]).map(e=>e.name).join("、")||"—"}`).join("\n");
+    }
+    sys+=`用户身体数据：性别${p.gender==="m"?"男":"女"}、${p.age}岁、${p.height}cm、${p.weight}kg、目标每日 ${c.target}kcal、蛋白质 ${c.protein}g、减脂缺口 ${p.deficit}kcal/天。
 
 【本周饮食计划】
 ${planText}
 
 【本周训练计划】
 ${wkText}
-
+`;
+  }else{
+    sys+=`（用户尚未生成本周计划${p&&p.weight?`；已知身体数据：性别${p.gender==="m"?"男":"女"}、${p.age}岁、${p.height}cm、${p.weight}kg`:""}。可先基于一般减脂原则与下方菜谱库回答饮食做法 / 营养问题；若用户问到「本周计划」相关，请先建议他去「资料」页生成计划。）
+`;
+  }
+  sys+=`
 【可参考的菜谱库（现有菜品，含食材/热量/忌口）】
 ${catalogText()}
 
@@ -1203,7 +1218,7 @@ function renderCoach(){
     reason.style.display="";
     reason.innerHTML=`<b>🤖 AI 搭配建议：</b>${escapeHtml(PLAN.aiReason)}`;
   }else if(reason){ reason.style.display="none"; }
-  const pane=$("#pane-coach");
+  const pane=$("#coachPane");
   if(!pane || pane.dataset.built) return;
   pane.dataset.built="1";
   // 合并后的 AI 教练：可折叠的「AI 设置」 + 聊天
@@ -1674,7 +1689,6 @@ function switchPane(name){
 }
 $$(".tab").forEach(t=>{ t.addEventListener("click",()=>{
   switchPane(t.dataset.pane);
-  if(t.dataset.pane==="coach" && PLAN) renderCoach();
   if(t.dataset.pane==="train") buildTrainPane();
 }); });
 
@@ -1689,6 +1703,7 @@ function switchView(name){
   const v=$("#view-"+name); if(v) v.classList.add("on");
   $$(".bottom-nav button").forEach(b=>b.classList.toggle("on", b.dataset.view===name));
   if(name==="plan") syncPlanView();
+  if(name==="coach") renderCoach();
   try{ localStorage.setItem("jp_view", name); }catch(e){}
 }
 $$(".bottom-nav button").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
@@ -1732,7 +1747,7 @@ function syncAIfromUI(){
   try{
     const sv=localStorage.getItem("jp_view");
     const hasPlan=!!PLAN;
-    switchView(sv==="plan"||sv==="data" ? sv : (hasPlan?"plan":"data"));
+    switchView(sv==="plan"||sv==="data"||sv==="coach" ? sv : (hasPlan?"plan":"data"));
     syncPlanView();
   }catch(e){}
 })();
