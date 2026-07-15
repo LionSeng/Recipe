@@ -117,6 +117,13 @@
   .chat-input{display:flex;gap:8px}
   .chat-input input{flex:1}
   .coach .muted{margin:0}
+  /* AI 教练 tab 内可折叠的 AI 设置 */
+  .coach-set{border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+  .coach-set-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;font-weight:600;user-select:none}
+  .coach-set-head .caret{color:var(--muted);transition:transform .2s ease}
+  .coach-set.collapsed .coach-set-body{display:none}
+  .coach-set.collapsed .coach-set-head .caret{transform:rotate(-90deg)}
+  .coach-set-body{padding:0 14px 14px}
 
   /* ===================== 优化新增 ===================== */
   /* 通用微交互 */
@@ -310,37 +317,6 @@
     </div>
     <input id="dislikes" style="margin-top:10px" placeholder="例如：香菜, 洋葱, 韭菜" />
     <p class="muted" style="margin:8px 0 0">提示：菜谱全部为中式家常、低脂少油做法，符合减脂需求。</p>
-  </section>
-
-  <!-- 2.5 AI 设置（可选） -->
-  <section class="card" id="aiCard">
-    <h2><span class="n">✨</span>AI 设置（可选）</h2>
-    <p class="muted" style="margin:0 0 12px">填了自家的模型 Key，就能用 AI 生成更贴合你的菜单，并在 App 里随时问 AI 饮食问题。Key 仅存于你本机浏览器，不会上传到任何服务器。</p>
-    <div class="grid">
-      <div><label>服务商</label>
-        <select id="aiProvider">
-          <option value="deepseek">DeepSeek</option>
-          <option value="openai">OpenAI</option>
-          <option value="qwen">通义千问 Qwen</option>
-          <option value="zhipu">智谱 GLM</option>
-          <option value="custom">自定义</option>
-        </select>
-      </div>
-      <div><label>模型名</label><input id="aiModel" value="deepseek-v4-flash" /></div>
-    </div>
-    <div style="margin-top:10px"><label>API Key</label>
-      <div style="display:flex;gap:8px">
-        <input id="aiKey" type="password" placeholder="sk-..." style="flex:1" autocomplete="off" />
-        <button class="btn ghost sm" id="aiKeyShow" type="button">显示</button>
-      </div>
-    </div>
-    <div style="margin-top:10px"><label>Base URL</label><input id="aiBase" value="https://api.deepseek.com/v1" /></div>
-    <div class="row" style="margin-top:12px;gap:10px;flex-wrap:wrap">
-      <label class="switch"><input id="aiGen" type="checkbox" checked><span class="track"></span></label>
-      <span>用 AI 生成一周计划（已填 Key 时生效，否则用本地算法）</span>
-      <button class="btn ghost sm" id="aiTest" type="button" style="margin-left:auto">测试连接</button>
-    </div>
-    <div id="aiMsg" class="muted" style="margin-top:8px;min-height:18px"></div>
   </section>
 
   <button class="btn" id="genBtn">生成我的一周备餐计划</button>
@@ -1186,6 +1162,7 @@ function pushMsg(role,text){
   return el;
 }
 async function coachAsk(userText, aiEl){
+  if(!PLAN){ if(aiEl) aiEl.textContent="请先生成一周计划，再来问 AI 哦～"; return; }
   const c=PLAN.c, p=readProfile();
   const planText=PLAN.days.map(d=>{
     const a=[`${WEEK[d.d]}：早 ${d.bf.name}`];
@@ -1194,10 +1171,26 @@ async function coachAsk(userText, aiEl){
     if(d.snack) a.push(`加餐 ${d.snack.name}`);
     return a.join("，");
   }).join("\n");
-  const sys=`你是用户的减脂餐私人教练。用户身体数据：性别${p.gender==="m"?"男":"女"}、目标每日 ${c.target}kcal、蛋白质 ${c.protein}g、减脂缺口 ${p.deficit}kcal/天。
-本周计划如下：
+  // 本周训练计划（若已生成）
+  let wkText="（本周尚未生成训练计划）";
+  if(WORKOUT && WORKOUT.days && WORKOUT.days.length){
+    wkText=WORKOUT.days.map(d=>`${d.label||("第"+d.n+"天")}：${(d.exs||[]).map(e=>e.name).join("、")||"—"}`).join("\n");
+  }
+  const sys=`你是用户的减脂餐 + 运动私人教练。用户身体数据：性别${p.gender==="m"?"男":"女"}、${p.age}岁、${p.height}cm、${p.weight}kg、目标每日 ${c.target}kcal、蛋白质 ${c.protein}g、减脂缺口 ${p.deficit}kcal/天。
+
+【本周饮食计划】
 ${planText}
-请基于以上信息，用简洁中文回答用户关于饮食、食材替换、营养搭配的问题。不要编造菜谱库外的新菜；替换建议优先从已有菜里选。回答仅供参考，不构成医疗建议。`;
+
+【本周训练计划】
+${wkText}
+
+【可参考的菜谱库（现有菜品，含食材/热量/忌口）】
+${catalogText()}
+
+请基于以上信息，用简洁中文回答用户关于饮食做法、食材替换、营养搭配、以及结合本周计划调整运动的问题。
+- 饮食做法类（如「鸡胸肉有哪些吃法」）：可列举菜谱库中相关菜品并给出家常低脂做法建议；不要编造菜谱库外、无法核实的新菜。
+- 运动调整类（如「根据这周计划换什么运动」）：结合上面训练计划与饮食缺口，给出具体可执行的替换或加练建议。
+回答仅供参考，不构成医疗或专业训练建议。`;
   try{
     const content=await callLLM([{role:"system",content:sys},{role:"user",content:userText}], false);
     if(aiEl) aiEl.textContent=content;
@@ -1213,20 +1206,84 @@ function renderCoach(){
   const pane=$("#pane-coach");
   if(!pane || pane.dataset.built) return;
   pane.dataset.built="1";
-  pane.innerHTML=`<div class="coach">
+  // 合并后的 AI 教练：可折叠的「AI 设置」 + 聊天
+  pane.innerHTML=`
+    <div class="coach-set" id="coachSet">
+      <div class="coach-set-head" id="coachSetHead">
+        <span>⚙️ AI 设置（可选）</span><span class="caret">▾</span>
+      </div>
+      <div class="coach-set-body">
+        <p class="muted" style="margin:0 0 10px">填了自家的模型 Key，就能用 AI 生成更贴合你的菜单，并在这里随时问 AI 饮食 / 运动问题。Key 仅存于本机浏览器，不会上传到任何服务器。</p>
+        <div class="grid">
+          <div><label>服务商</label>
+            <select id="aiProvider">
+              <option value="deepseek">DeepSeek</option>
+              <option value="openai">OpenAI</option>
+              <option value="qwen">通义千问 Qwen</option>
+              <option value="zhipu">智谱 GLM</option>
+              <option value="custom">自定义</option>
+            </select>
+          </div>
+          <div><label>模型名</label><input id="aiModel" /></div>
+        </div>
+        <div style="margin-top:10px"><label>API Key</label>
+          <div style="display:flex;gap:8px">
+            <input id="aiKey" type="password" placeholder="sk-..." style="flex:1" autocomplete="off" />
+            <button class="btn ghost sm" id="aiKeyShow" type="button">显示</button>
+          </div>
+        </div>
+        <div style="margin-top:10px"><label>Base URL</label><input id="aiBase" /></div>
+        <div class="row" style="margin-top:12px;gap:10px;flex-wrap:wrap">
+          <label class="switch"><input id="aiGen" type="checkbox" checked><span class="track"></span></label>
+          <span>用 AI 生成一周计划（已填 Key 时生效，否则用本地算法）</span>
+          <button class="btn ghost sm" id="aiTest" type="button" style="margin-left:auto">测试连接</button>
+        </div>
+        <div id="aiMsg" class="muted" style="margin-top:8px;min-height:18px"></div>
+      </div>
+    </div>
+    <div class="coach">
       <div class="chat" id="chatLog"></div>
       <div class="chat-input">
-        <input id="chatInput" placeholder="问 AI：比如「鸡肉吃腻了换什么」「怎么补足蛋白」「这周为什么这么搭」" />
+        <input id="chatInput" placeholder="问 AI：比如「鸡胸肉有哪些吃法」「根据这周计划该换什么运动」「怎么补足蛋白」" />
         <button class="btn sm" id="chatSend">发送</button>
       </div>
-      <p class="muted">AI 会结合你的身体数据和本周计划回答，仅供参考。</p>
+      <p class="muted">AI 会结合你的身体数据、本周饮食与训练计划回答，仅供参考。</p>
     </div>`;
+  // 折叠交互
+  const setEl=pane.querySelector("#coachSet");
+  pane.querySelector("#coachSetHead").addEventListener("click",()=> setEl.classList.toggle("collapsed"));
+  // 从全局 AI 回填界面
+  if(AI.provider) pane.querySelector("#aiProvider").value=AI.provider;
+  pane.querySelector("#aiKey").value=AI.key||"";
+  pane.querySelector("#aiModel").value=AI.model||"";
+  pane.querySelector("#aiBase").value=AI.base||"";
+  pane.querySelector("#aiGen").checked=AI.gen!==false;
+  if(AI.key) setEl.classList.add("collapsed"); // 已配置则默认收起，专注聊天
+  // 绑定 AI 设置交互
+  pane.querySelector("#aiProvider").addEventListener("change",()=>{ applyAIPreset(); syncAIfromUI(); });
+  ["#aiKey","#aiModel","#aiBase"].forEach(s=>pane.querySelector(s).addEventListener("input",syncAIfromUI));
+  pane.querySelector("#aiGen").addEventListener("change",syncAIfromUI);
+  pane.querySelector("#aiKeyShow").addEventListener("click",()=>{
+    const i=pane.querySelector("#aiKey"); i.type=i.type==="password"?"text":"password";
+    pane.querySelector("#aiKeyShow").textContent=i.type==="password"?"显示":"隐藏";
+  });
+  pane.querySelector("#aiTest").addEventListener("click",async()=>{
+    syncAIfromUI();
+    const m=pane.querySelector("#aiMsg");
+    if(!AI.key){ m.textContent="请先填写 API Key"; m.style.color="var(--warn)"; return; }
+    m.textContent="连接测试中…"; m.style.color="";
+    try{
+      const c=await callLLM([{role:"user",content:"你好，请用一句话回复：已连通。"}], false);
+      m.textContent="✅ 连接成功："+c.slice(0,40); m.style.color="var(--brand)";
+    }catch(e){ m.textContent="❌ "+e.message; m.style.color="var(--warn)"; }
+  });
+  // 聊天交互
   const input=pane.querySelector("#chatInput");
   const send=pane.querySelector("#chatSend");
   const fire=()=>{
     const v=input.value.trim(); if(!v) return;
     pushMsg("user",v); input.value="";
-    if(!AI.key){ pushMsg("ai","还没填 API Key～先去顶部「✨ AI 设置」填上你自己的模型 Key，才能问 AI 哦。"); return; }
+    if(!AI.key){ pushMsg("ai","还没填 API Key～先在上方「⚙️ AI 设置」里填写你自己的模型 Key，才能问 AI 哦。"); return; }
     const aiEl=pushMsg("ai","🤖 思考中…");
     coachAsk(v, aiEl);
   };
@@ -1645,7 +1702,7 @@ $("#histClose").addEventListener("click",()=>$("#histMask").classList.remove("on
 $("#histMask").addEventListener("click",e=>{ if(e.target.id==="histMask") $("#histMask").classList.remove("on"); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("#histMask").classList.remove("on"); });
 
-/* AI 设置交互 */
+/* AI 设置交互（元素在 AI 教练 tab 内由 renderCoach 构建，绑定也在其中进行） */
 function applyAIPreset(){
   const pre=AI_PRESETS[$("#aiProvider").value];
   if(pre && pre.base){ $("#aiModel").value=pre.model; $("#aiBase").value=pre.base; }
@@ -1658,23 +1715,6 @@ function syncAIfromUI(){
   AI.gen=$("#aiGen").checked;
   saveAI();
 }
-$("#aiProvider").addEventListener("change",()=>{ applyAIPreset(); syncAIfromUI(); });
-["#aiKey","#aiModel","#aiBase"].forEach(s=>$(s).addEventListener("input",syncAIfromUI));
-$("#aiGen").addEventListener("change",syncAIfromUI);
-$("#aiKeyShow").addEventListener("click",()=>{
-  const i=$("#aiKey"); i.type = i.type==="password"?"text":"password";
-  $("#aiKeyShow").textContent = i.type==="password"?"显示":"隐藏";
-});
-$("#aiTest").addEventListener("click",async()=>{
-  syncAIfromUI();
-  const m=$("#aiMsg");
-  if(!AI.key){ m.textContent="请先填写 API Key"; m.style.color="var(--warn)"; return; }
-  m.textContent="连接测试中…"; m.style.color="";
-  try{
-    const c=await callLLM([{role:"user",content:"你好，请用一句话回复：已连通。"}], false);
-    m.textContent="✅ 连接成功："+c.slice(0,40); m.style.color="var(--brand)";
-  }catch(e){ m.textContent="❌ "+e.message; m.style.color="var(--warn)"; }
-});
 
 /* ============ 启动时恢复 ============ */
 (function restore(){
@@ -1694,14 +1734,6 @@ $("#aiTest").addEventListener("click",async()=>{
     const hasPlan=!!PLAN;
     switchView(sv==="plan"||sv==="data" ? sv : (hasPlan?"plan":"data"));
     syncPlanView();
-  }catch(e){}
-  /* 恢复 AI 设置到界面 */
-  try{
-    if(AI.provider) $("#aiProvider").value=AI.provider;
-    $("#aiKey").value=AI.key||"";
-    $("#aiModel").value=AI.model||"";
-    $("#aiBase").value=AI.base||"";
-    $("#aiGen").checked=AI.gen!==false;
   }catch(e){}
 })();
 </script>
