@@ -12,7 +12,7 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;}
-  .wrap{max-width:960px;margin:0 auto;padding:16px 16px 60px;}
+  .wrap{max-width:960px;margin:0 auto;padding:16px 16px 88px;}
   header{display:flex;align-items:center;gap:12px;padding:18px 4px 10px;}
   header .logo{width:40px;height:40px;border-radius:12px;background:var(--brand);display:grid;place-items:center;color:#fff;font-size:20px;}
   header h1{font-size:20px;margin:0;}
@@ -83,6 +83,18 @@
   .tip{background:var(--brand-soft);border-radius:11px;padding:12px;font-size:13px;color:#0b6b50;line-height:1.7}
   .muted{color:var(--muted);font-size:13px}
   .hidden{display:none!important}
+
+  /* ============ 顶层分屏 + 底部导航 ============ */
+  .view{display:none}
+  .view.on{display:block}
+  header.sticky{position:sticky;top:0;z-index:20;background:var(--bg);padding:14px 4px 10px;border-bottom:1px solid var(--line)}
+  .empty-state{text-align:center;padding:64px 22px}
+  .empty-state .empty-ico{font-size:46px}
+  .empty-state h3{margin:14px 0 6px;font-size:18px}
+  .empty-state .btn{max-width:260px;margin:16px auto 0}
+  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:#fff;border-top:1px solid var(--line);box-shadow:0 -2px 14px rgba(16,24,40,.07)}
+  .bottom-nav button{flex:1;background:none;border:none;padding:9px 0 calc(9px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit}
+  .bottom-nav button.on{color:var(--brand);font-weight:600}
   footer{text-align:center;color:var(--muted);font-size:12px;margin-top:24px;line-height:1.8}
 
   /* AI 搭配建议 */
@@ -158,7 +170,7 @@
   }
   /* 移动端优化 */
   @media(max-width:560px){
-    .wrap{padding:12px 12px 84px}
+    .wrap{padding:12px 12px 96px}
     header{padding:14px 2px 8px}
     header h1{font-size:18px}
     .card{padding:15px}
@@ -233,7 +245,7 @@
 </head>
 <body>
 <div class="wrap">
-  <header>
+  <header class="sticky">
     <div class="logo">🥗</div>
     <div>
       <h1>减脂计划 · 备餐+训练</h1>
@@ -241,6 +253,7 @@
     </div>
   </header>
 
+  <main id="view-data" class="view">
   <!-- 1. 身体数据 -->
   <section class="card">
     <h2><span class="n">1</span>我的身体数据</h2>
@@ -324,7 +337,15 @@
   </section>
 
   <button class="btn" id="genBtn">生成我的一周备餐计划</button>
+  </main>
 
+  <main id="view-plan" class="view on">
+  <div id="planEmpty" class="empty-state">
+    <div class="empty-ico">🥗</div>
+    <h3>还没有你的周计划</h3>
+    <p class="muted">填写身体数据和饮食习惯，一键生成专属的备餐 + 训练方案。</p>
+    <button class="btn" id="emptyGenBtn" style="max-width:260px;margin:16px auto 0">去填写资料并生成</button>
+  </div>
   <!-- 结果区 -->
   <section id="result" class="hidden">
     <div class="card">
@@ -360,6 +381,7 @@
       <button class="btn ghost sm" id="printBtn">打印 / 存为 PDF</button>
     </div>
   </section>
+  </main>
 
   <!-- 历史方案模态框 -->
   <div class="modal-mask" id="histMask">
@@ -375,6 +397,11 @@
     数据仅保存在你本机浏览器，不会上传。<br>
     营养值为按常见做法估算，仅供参考，不作为医疗建议。
   </footer>
+
+  <nav class="bottom-nav">
+    <button data-view="plan" class="on">📅<span>计划</span></button>
+    <button data-view="data">⚙️<span>资料</span></button>
+  </nav>
 </div>
 
 <script>
@@ -1024,6 +1051,7 @@ window.loadSaved=function(id){
   PLAN=s.plan; CHECKED={};
   WORKOUT=s.workout||null; saveWorkout();
   $("#result").classList.remove("hidden");
+  switchView("plan"); syncPlanView();
   renderStats(); renderMenu(); renderShop(); renderBatch(); renderForecast(); renderCoach();
   renderTrainPlan();
   save();
@@ -1506,6 +1534,7 @@ function doGenerate(){
   if(AI.key && AI.gen){
     // AI 生成较慢，先展示骨架屏
     $("#result").classList.remove("hidden");
+    switchView("plan"); syncPlanView();
     $("#pane-menu").innerHTML='<div class="day-skeleton skeleton"></div>'.repeat(3);
     const run=async()=>{
       try{
@@ -1526,6 +1555,7 @@ function doGenerate(){
     applyLocks(plan, oldPlan);
     PLAN=plan; CHECKED={};
     $("#result").classList.remove("hidden");
+    switchView("plan"); syncPlanView();
     renderStats(); renderMenu(); renderShop(); renderBatch(); renderForecast(); renderCoach();
     save();
     btn.disabled=false; if(reg) reg.disabled=false; btn.textContent=txt;
@@ -1550,6 +1580,22 @@ $$(".tab").forEach(t=>{ t.addEventListener("click",()=>{
   if(t.dataset.pane==="coach" && PLAN) renderCoach();
   if(t.dataset.pane==="train") buildTrainPane();
 }); });
+
+/* 顶层视图切换（计划 / 资料） */
+function syncPlanView(){
+  const res=$("#result"), empty=$("#planEmpty");
+  if(!res||!empty) return;
+  empty.style.display = res.classList.contains("hidden") ? "block" : "none";
+}
+function switchView(name){
+  $$(".view").forEach(v=>v.classList.remove("on"));
+  const v=$("#view-"+name); if(v) v.classList.add("on");
+  $$(".bottom-nav button").forEach(b=>b.classList.toggle("on", b.dataset.view===name));
+  if(name==="plan") syncPlanView();
+  try{ localStorage.setItem("jp_view", name); }catch(e){}
+}
+$$(".bottom-nav button").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
+const emptyGen=$("#emptyGenBtn"); if(emptyGen) emptyGen.addEventListener("click",()=>switchView("data"));
 $("#printBtn").addEventListener("click",()=>window.print());
 
 /* 方案保存与历史交互 */
@@ -1601,6 +1647,13 @@ $("#aiTest").addEventListener("click",async()=>{
     const pl=JSON.parse(localStorage.getItem("jp_plan")||"null");
     if(pl){ PLAN=pl; $("#result").classList.remove("hidden");
       renderStats(); renderMenu(); renderShop(); renderBatch(); renderForecast(); renderCoach(); }
+  }catch(e){}
+  /* 默认视图：有存储的偏好用之，否则有方案看计划、无方案看资料 */
+  try{
+    const sv=localStorage.getItem("jp_view");
+    const hasPlan=!!PLAN;
+    switchView(sv==="plan"||sv==="data" ? sv : (hasPlan?"plan":"data"));
+    syncPlanView();
   }catch(e){}
   /* 恢复 AI 设置到界面 */
   try{
